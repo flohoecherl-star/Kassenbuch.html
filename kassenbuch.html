@@ -1,0 +1,2517 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kassenbuch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#10141A;
+    --panel:#1A2029;
+    --panel-alt:#212934;
+    --paper:#ECE6D6;
+    --ink:#D8DCE2;
+    --muted:#8B94A3;
+    --pos:#4E9C7C;
+    --neg:#B5533C;
+    --gold:#C9A227;
+    --line:#2A323D;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:20px 16px calc(84px + env(safe-area-inset-bottom));}
+  h1,h2,h3{font-family:'Fraunces', serif;font-weight:600;margin:0;}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .topbar{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;}
+  .topbar h1{font-size:22px;}
+  .topbar .sub{font-family:'Fraunces',serif;font-style:italic;font-size:13px;color:var(--muted);}
+
+  /* Monatssaldo — Kontoauszug-Kopf (kein Bon/Perforation mehr) */
+  .statement{
+    background:var(--panel);
+    border-radius:var(--radius);
+    padding:22px 22px 20px;
+    border-bottom:2px solid var(--gold);
+  }
+  .statement-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .month-nav{display:flex;align-items:center;gap:10px;}
+  .month-nav button{
+    background:var(--panel-alt);border:1px solid var(--line);color:var(--ink);
+    width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;line-height:1;
+  }
+  .month-nav button:hover{border-color:var(--gold);}
+  .month-nav .month-label{font-family:'Fraunces',serif;font-size:18px;min-width:150px;text-align:center;}
+  .statement-hero{text-align:center;padding:4px 0 22px;}
+  .hero-num{font-family:'IBM Plex Mono',monospace;font-size:40px;font-weight:600;line-height:1;letter-spacing:-.01em;}
+  .hero-num.pos{color:var(--pos);}
+  .hero-num.neg{color:var(--neg);}
+  .hero-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:9px;}
+  .statement-sub{display:flex;align-items:center;justify-content:center;gap:26px;padding-top:18px;border-top:1px solid var(--line);}
+  .sub-item{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .sub-label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);}
+  .sub-val{font-family:'IBM Plex Mono',monospace;font-size:15.5px;font-weight:600;}
+  .sub-div{width:1px;height:28px;background:var(--line);}
+
+  /* sections */
+  .card{background:var(--panel);border-radius:var(--radius);padding:18px 20px;margin-top:16px;}
+  .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .card-head h2{font-size:16px;}
+  .hint{font-size:12px;color:var(--muted);margin-top:2px;}
+  .add-btn{
+    background:var(--panel-alt);border:1px solid var(--line);color:var(--ink);
+    padding:8px 14px;border-radius:9px;font-size:13px;cursor:pointer;font-family:inherit;
+    min-height:36px;
+  }
+  .add-btn:hover{border-color:var(--gold);}
+  .add-btn:active{transform:scale(0.96);}
+
+  table{width:100%;border-collapse:collapse;}
+  tr.row{border-top:1px solid var(--line);}
+  tr.row:first-child{border-top:none;}
+  td{padding:12px 4px;vertical-align:middle;}
+  td.amount{font-family:'IBM Plex Mono',monospace;text-align:right;white-space:nowrap;}
+  td.name-cell input, td.amount input, .addline input, .addline select{
+    background:transparent;border:none;color:var(--ink);font-family:inherit;font-size:14.5px;
+    width:100%;padding:7px 6px;border-radius:7px;min-height:38px;
+  }
+  td.name-cell input:hover, td.amount input:hover{background:var(--panel-alt);}
+  td.name-cell input:focus, td.amount input:focus{background:var(--panel-alt);outline:1px solid var(--gold);}
+  .note{font-size:11px;color:var(--muted);display:block;}
+  .chip{
+    display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;
+    font-family:'IBM Plex Mono',monospace;white-space:nowrap;
+  }
+  .del-btn{
+    background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;
+    padding:0;width:38px;height:38px;border-radius:9px;transition:background .15s,color .15s;
+  }
+  .del-btn:hover{color:var(--neg);}
+  .del-btn:active{transform:scale(0.94);}
+  .del-btn.armed{background:var(--neg);color:#fff;font-size:11px;font-family:'IBM Plex Mono',monospace;letter-spacing:.02em;}
+  .sum-row td{padding-top:12px;border-top:1px solid var(--line);font-weight:600;}
+
+  .addline{
+    display:grid;grid-template-columns:100px 1fr 130px 90px 32px;gap:6px;
+    background:var(--panel-alt);border-radius:8px;padding:6px 8px;margin-top:10px;align-items:center;
+  }
+  .addline select{cursor:pointer;}
+  .addline button{
+    background:var(--gold);border:none;color:#1A1503;font-weight:600;border-radius:6px;
+    height:28px;cursor:pointer;font-size:14px;
+  }
+  .addline.acc{grid-template-columns:1fr 150px 90px 32px;}
+  @media(max-width:520px){
+    .addline, .addline.acc{grid-template-columns:1fr 1fr;}
+    .addline button{grid-column:span 2;}
+  }
+
+  .catbar-row{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:13px;}
+  .catbar-row .label{width:150px;flex-shrink:0;color:var(--muted);}
+  .catbar-track{flex:1;height:8px;background:var(--panel-alt);border-radius:6px;overflow:hidden;}
+  .catbar-fill{height:100%;border-radius:6px;}
+  .catbar-row .val{font-family:'IBM Plex Mono',monospace;width:70px;text-align:right;flex-shrink:0;}
+
+  .trend{display:flex;align-items:flex-end;gap:10px;height:110px;margin-top:8px;}
+  .trend .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+  .trend .bar{width:60%;border-radius:4px 4px 0 0;min-height:2px;}
+  .trend .m-label{font-size:10px;color:var(--muted);margin-top:6px;font-family:'IBM Plex Mono',monospace;}
+
+  .callout{
+    border:1px solid var(--gold);border-radius:8px;padding:12px 14px;margin-top:14px;
+    display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .callout .t{font-size:13px;}
+  .callout .t b{color:var(--gold);}
+  .callout .figs{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold);}
+
+  details.settings{margin-top:20px;}
+  details.settings summary{cursor:pointer;color:var(--muted);font-size:12px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em;}
+  details.settings .card{margin-top:10px;}
+
+  ::selection{background:var(--gold);color:#1A1503;}
+  a{color:var(--gold);}
+  button:focus-visible, input:focus-visible, select:focus-visible{outline:2px solid var(--gold);outline-offset:1px;}
+  @media (prefers-reduced-motion: reduce){ *{animation:none !important;transition:none !important;} }
+
+  /* Gruppierte Fixkosten */
+  tr.group-row td{
+    padding:12px 4px 5px;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--muted);
+  }
+  tr.group-row td.amount{font-size:12px;color:var(--ink);}
+  .dot{display:inline-block;width:4px;height:13px;border-radius:2px;margin-right:9px;vertical-align:-2px;}
+
+  /* Fixkosten als Karten (statt Tabelle) */
+  .fg-list{display:flex;flex-direction:column;gap:8px;}
+  .fg-card{background:var(--panel-alt);border-radius:12px;overflow:hidden;}
+  .fg-head{
+    width:100%;display:flex;align-items:center;gap:11px;padding:12px 12px;
+    background:none;border:none;cursor:pointer;text-align:left;font-family:inherit;color:var(--ink);
+    min-height:56px;
+  }
+  .fg-head:active{background:rgba(255,255,255,0.03);}
+  .fg-badge{
+    flex-shrink:0;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    font-family:'Fraunces',serif;font-weight:600;font-size:14px;
+  }
+  .fg-head-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .fg-title{font-size:14.5px;font-weight:500;}
+  .fg-sub{font-size:11.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  .fg-due{display:block;font-size:11px;color:var(--gold);font-family:'IBM Plex Mono',monospace;margin-top:1px;}
+  .fg-head-amt{font-family:'IBM Plex Mono',monospace;font-size:14.5px;font-weight:600;flex-shrink:0;}
+  .fg-chevron{
+    flex-shrink:0;color:var(--muted);font-size:11px;transition:transform .2s ease;
+    width:18px;height:18px;display:flex;align-items:center;justify-content:center;
+  }
+  .fg-card.open .fg-chevron{transform:rotate(180deg);color:var(--gold);}
+  .fg-items{border-top:1px solid var(--line);}
+  .fg-item{padding:12px;border-top:1px solid var(--line);}
+  .fg-item:first-child{border-top:none;}
+  .fg-item-name-row{display:flex;align-items:center;gap:6px;}
+  .fg-name{
+    flex:1;background:transparent;border:none;color:var(--ink);font-family:inherit;font-size:14.5px;
+    font-weight:500;padding:6px 6px;border-radius:7px;min-height:36px;
+  }
+  .fg-name:hover{background:var(--panel);}
+  .fg-name:focus{background:var(--panel);outline:1px solid var(--gold);}
+  .fg-item-meta{font-size:11.5px;color:var(--muted);padding:0 6px;line-height:1.5;}
+  .fg-item-controls{display:flex;gap:6px;margin-top:8px;align-items:center;}
+  .fg-cat-sel{
+    flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);color:var(--ink);
+    font-family:inherit;font-size:12.5px;padding:7px 8px;border-radius:8px;
+  }
+  .fg-amt-wrap{display:flex;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-shrink:0;}
+  .fg-amt{
+    width:74px;background:none;border:none;color:var(--ink);font-family:'IBM Plex Mono',monospace;
+    font-size:13.5px;text-align:right;padding:7px 6px 7px 8px;
+  }
+  .fg-amt-wrap .iv-sel{border:none;background:none;margin:0;border-left:1px solid var(--line);border-radius:0;padding:7px 5px;}
+
+  /* Kleinunternehmen */
+  .biz-flow{margin-top:14px;border-top:1px solid var(--line);padding-top:12px;}
+  .biz-line{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:13.5px;}
+  .biz-line .amount-txt{font-family:'IBM Plex Mono',monospace;}
+  .biz-line.result{border-top:1px solid var(--line);margin-top:6px;padding-top:10px;font-weight:600;}
+  .biz-line.result .amount-txt{color:var(--gold);font-size:16px;}
+  .inline-num{
+    background:var(--panel-alt);border:1px solid var(--line);color:var(--ink);
+    width:52px;padding:2px 6px;border-radius:6px;font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;text-align:right;
+  }
+  .inline-num:focus{outline:1px solid var(--gold);}
+
+  /* Überschuss verteilen */
+  .prog-wrap{margin:10px 0 4px;}
+  .prog-track{height:10px;background:var(--panel-alt);border-radius:6px;overflow:hidden;}
+  .prog-fill{height:100%;background:var(--pos);border-radius:6px;transition:width .3s ease;}
+  .prog-meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:5px;font-family:'IBM Plex Mono',monospace;}
+  .split-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px;}
+  .split-row:first-of-type{border-top:none;}
+  .split-row .left{display:flex;align-items:center;gap:8px;}
+  .split-row .euro{font-family:'IBM Plex Mono',monospace;font-weight:600;}
+  .split-hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;}
+  .split-hint b{color:var(--gold);font-weight:600;}
+
+  @media(max-width:600px){
+    table, tbody{display:block;width:100%;}
+    tbody tr{display:grid;align-items:center;column-gap:6px;}
+    tbody td{display:block;width:auto !important;padding:3px 2px;}
+    /* Fixkosten: Name in voller Breite, darunter Kategorie + Betrag */
+    tr[data-kind="fixed"]{grid-template-columns:1fr 92px 38px;}
+    tr[data-kind="fixed"] td.name-cell{grid-column:1 / -1;}
+    /* Bewegungen: Datum + Name oben, Kategorie + Betrag darunter */
+    tr[data-kind="tx"]{grid-template-columns:104px 1fr 92px 38px;}
+    tr[data-kind="tx"] td.name-cell{grid-column:2 / -1;}
+    tr[data-kind="tx"] td.amount{grid-column:3;}
+    /* Einzeiler */
+    tr[data-kind="income"], tr.group-row, tr.sum-row{grid-template-columns:1fr 104px 38px;}
+    tr[data-kind="account"]{grid-template-columns:1fr 104px 30px 38px;}
+    td.amount{font-size:13px;}
+    tr[data-kind="biz"]{grid-template-columns:104px 1fr 92px 38px;}
+    td select{font-size:12px;}
+    tr.row{padding:4px 0;}
+  }
+
+  .fade-in{animation:fadeIn .35s ease both;}
+
+  .fade-in{animation:fadeIn .35s ease both;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  /* Backup-Buttons */
+  .backup-btns{display:flex;gap:6px;}
+  .backup-btns .add-btn{padding:5px 9px;font-size:12px;}
+
+  /* KPI-Strip unter dem Beleg */
+  .kpi-strip{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;}
+  .kpi{background:var(--panel);border-radius:var(--radius);padding:12px 10px;text-align:center;}
+  .kpi .eyebrow{display:block;margin-bottom:5px;}
+  .kpi b{font-family:'IBM Plex Mono',monospace;font-size:17px;display:block;}
+  .kpi b.pos{color:var(--pos);} .kpi b.neg{color:var(--neg);}
+  .kpi .kpi-note{font-size:10.5px;color:var(--muted);}
+
+  /* Aufklappbare Gruppen */
+  tr.group-row.toggle{cursor:pointer;}
+  tr.group-row.toggle:hover td{color:var(--ink);}
+  .caret{display:inline-block;width:12px;color:var(--muted);font-size:10px;}
+  .grp-count{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);opacity:.7;}
+  .due-tag{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);margin-left:6px;}
+  .due-now{color:var(--gold);}
+
+  /* Intervall- & Fälligkeits-Selects */
+  .iv-sel{background:var(--panel-alt);border:1px solid var(--line);color:var(--muted);
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;border-radius:5px;padding:2px 3px;margin-top:3px;width:100%;cursor:pointer;}
+  .iv-sel:focus{outline:1px solid var(--gold);}
+  .anchor-sel{background:var(--panel-alt);border:1px solid var(--line);color:var(--ink);
+    font-size:10.5px;border-radius:5px;padding:1px 2px;cursor:pointer;}
+  td.amount{position:relative;}
+
+  /* Scope (Gemeinsam/Privat) */
+  .scope-wrap{display:inline-flex;gap:4px;margin-top:4px;}
+  .scope-sel, .who-sel{background:var(--panel-alt);border:1px solid var(--line);color:var(--muted);
+    font-family:'IBM Plex Mono',monospace;font-size:10px;border-radius:5px;padding:1px 4px;cursor:pointer;}
+  .scope-sel.gemeinsam, .who-sel.gemeinsam{color:var(--gold);border-color:rgba(201,162,39,.4);}
+  .scope-sel:focus, .who-sel:focus{outline:1px solid var(--gold);}
+
+  /* Paar-Aufteilung */
+  .name-inline{background:var(--panel-alt);border:1px solid var(--line);color:var(--ink);
+    font-family:inherit;font-size:13.5px;border-radius:6px;padding:1px 6px;width:90px;}
+  .name-inline:focus{outline:1px solid var(--gold);}
+  .pair-head{font-size:12.5px;font-weight:600;color:var(--ink);margin:16px 0 4px;}
+  .pair-grid{display:grid;grid-template-columns:1fr auto auto;gap:5px 16px;font-size:13.5px;align-items:baseline;}
+  .pair-grid .h{color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:right;text-transform:uppercase;letter-spacing:.05em;}
+  .pair-grid .v{font-family:'IBM Plex Mono',monospace;text-align:right;}
+  .pair-grid .v.neg{color:var(--neg);}
+  .pair-grid .tot{border-top:1px solid var(--line);padding-top:6px;margin-top:2px;font-weight:600;}
+
+  /* Kommende Fälligkeiten */
+  .trend .up-val{font-size:9px;color:var(--gold);font-family:'IBM Plex Mono',monospace;margin-bottom:2px;}
+
+  /* Sparziele */
+  .goal{padding:10px 0;border-top:1px solid var(--line);}
+  .goal:first-of-type{border-top:none;}
+  .goal-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .goal-name{flex:1;background:transparent;border:none;color:var(--ink);font-family:inherit;font-size:14px;font-weight:500;padding:2px;border-radius:6px;}
+  .goal-name:hover{background:var(--panel-alt);}
+  .goal-name:focus{background:var(--panel-alt);outline:1px solid var(--gold);}
+  .goal-pct{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);}
+  .goal-meta{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:6px;font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  .goal-meta .inline-num{width:70px;}
+
+  /* Finanz-Check */
+  .check-list{display:flex;flex-direction:column;gap:2px;}
+  .check-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line);}
+  .check-row:first-child{border-top:none;}
+  .check-dot{width:4px;height:22px;border-radius:2px;flex-shrink:0;}
+  .check-label{font-size:13.5px;width:130px;flex-shrink:0;}
+  .check-txt{font-size:12.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  @media(max-width:520px){ .check-label{width:108px;} .check-txt{font-size:11.5px;} }
+
+  /* --- Fix: Beträge dürfen nicht aus der Zeile laufen --- */
+  tr.group-row td.amount{font-variant-numeric:tabular-nums;}
+  .due-line{display:block;font-size:11px;color:var(--gold);font-family:'IBM Plex Mono',monospace;margin-top:2px;}
+  .grp-name{display:block;line-height:1.35;}
+  .avg-tag{display:block;font-size:9.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;}
+
+  /* Donut */
+  .donut-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;justify-content:center;}
+  .donut-legend{flex:1;min-width:190px;display:flex;flex-direction:column;gap:5px;}
+  .lg-row{display:flex;align-items:center;gap:8px;font-size:12.5px;}
+  .lg-row .lg-name{flex:1;}
+  .lg-row .lg-val{font-family:'IBM Plex Mono',monospace;color:var(--muted);}
+  .donut-center{font-family:'IBM Plex Mono',monospace;}
+
+  /* Projektion */
+  .proj-inputs{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;font-size:12.5px;color:var(--muted);margin-bottom:10px;}
+  .proj-inputs label{display:flex;align-items:center;gap:5px;}
+  .proj-legend{display:flex;gap:14px;font-size:11.5px;color:var(--muted);margin-top:6px;justify-content:center;flex-wrap:wrap;}
+  .proj-legend span{display:flex;align-items:center;gap:5px;}
+  .proj-key{width:10px;height:10px;border-radius:2px;display:inline-block;}
+
+  /* Tipps */
+  .tip{display:flex;gap:11px;padding:11px 0;border-top:1px solid var(--line);}
+  .tip:first-of-type{border-top:none;}
+  .tip .ic{font-size:16px;line-height:1.3;flex-shrink:0;width:20px;text-align:center;}
+  .tip .tx{font-size:13px;line-height:1.5;}
+  .tip .tx b{color:var(--gold);font-weight:600;}
+  .tip .tx b.tt{display:block;font-weight:600;font-size:13px;margin-bottom:1px;color:var(--ink);}
+  .disclaimer{font-size:11px;color:var(--muted);margin-top:14px;line-height:1.5;border-top:1px solid var(--line);padding-top:10px;}
+
+  /* Einnahmen-Gruppen */
+  .inc-group{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 2px;}
+  .inc-group:first-of-type{margin-top:0;}
+
+  /* Tabs — fixed to the bottom, thumb-friendly */
+  .tabbar{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:2px;
+    padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+    background:rgba(16,20,26,0.92);backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);
+    max-width:760px;margin:0 auto;
+  }
+  .tab{
+    flex:1;background:none;border:none;color:var(--muted);
+    font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;padding:8px 2px 6px;border-radius:10px;
+    cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px;
+    min-height:52px;justify-content:center;
+  }
+  .tab .tab-ic{font-size:18px;line-height:1;}
+  .tab:active{transform:scale(0.94);}
+  .tab.active{color:var(--gold);}
+  .tab.active .tab-ic{filter:drop-shadow(0 0 6px rgba(201,162,39,.35));}
+
+  /* Bottom sheet */
+  .sheet-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:40;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  .sheet-overlay.open{opacity:1;pointer-events:auto;}
+  .sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:41;max-width:760px;margin:0 auto;
+    background:var(--panel);border-radius:18px 18px 0 0;
+    padding:10px 20px calc(24px + env(safe-area-inset-bottom));
+    max-height:82vh;overflow-y:auto;
+    transform:translateY(100%);transition:transform .25s cubic-bezier(.32,.72,0,1);
+    box-shadow:0 -8px 30px rgba(0,0,0,.4);
+  }
+  .sheet.open{transform:translateY(0);}
+  .sheet-handle{width:36px;height:4px;background:var(--line);border-radius:3px;margin:0 auto 14px;}
+  .sheet h3{font-size:17px;margin-bottom:14px;}
+  .sheet .field{margin-bottom:12px;}
+  .sheet .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-family:'IBM Plex Mono',monospace;letter-spacing:.03em;}
+  .sheet .field input, .sheet .field select{
+    width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--ink);
+    font-family:inherit;font-size:15px;padding:11px 12px;border-radius:10px;
+  }
+  .sheet .field input:focus, .sheet .field select:focus{outline:2px solid var(--gold);outline-offset:-1px;}
+  .sheet .chip-grid{display:flex;flex-wrap:wrap;gap:7px;}
+  .sheet .cchip{
+    display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:20px;
+    background:var(--panel-alt);border:1px solid var(--line);color:var(--ink);font-size:13px;
+    cursor:pointer;font-family:inherit;
+  }
+  .sheet .cchip .dot{width:4px;height:11px;margin:0;}
+  .sheet .cchip.selected{border-color:var(--gold);background:rgba(201,162,39,.12);}
+  .sheet .sheet-submit{
+    width:100%;background:var(--gold);border:none;color:#1A1503;font-weight:600;
+    border-radius:10px;padding:13px;font-size:15px;cursor:pointer;margin-top:6px;
+  }
+  .sheet .sheet-submit:active{transform:scale(0.98);}
+  .sheet-close{
+    position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);
+    font-size:18px;cursor:pointer;width:32px;height:32px;
+  }
+
+  /* Toast (Undo) */
+  .toast{
+    position:fixed;left:50%;bottom:calc(74px + env(safe-area-inset-bottom));z-index:50;
+    transform:translateX(-50%) translateY(20px);
+    background:#2A323D;color:var(--ink);border:1px solid var(--line);
+    padding:11px 10px 11px 16px;border-radius:11px;font-size:13.5px;
+    display:flex;align-items:center;gap:14px;box-shadow:0 6px 20px rgba(0,0,0,.4);
+    opacity:0;pointer-events:none;transition:all .25s ease;white-space:nowrap;
+  }
+  .toast.open{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;}
+  .toast button{background:none;border:none;color:var(--gold);font-weight:600;font-size:13.5px;cursor:pointer;padding:4px 6px;}
+
+  /* Nur Inhalte des aktiven Tabs anzeigen */
+  #app [data-tab]{display:none;}
+  #app[data-active-tab="monat"] [data-tab="monat"],
+  #app[data-active-tab="haushalt"] [data-tab="haushalt"],
+  #app[data-active-tab="paar"] [data-tab="paar"],
+  #app[data-active-tab="sparen"] [data-tab="sparen"],
+  #app[data-active-tab="auswertung"] [data-tab="auswertung"]{display:block;}
+  #app[data-active-tab="monat"] .kpi-strip[data-tab="monat"]{display:grid;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">Lade…</div>
+
+<nav class="tabbar" id="tabbar"></nav>
+
+<div class="sheet-overlay" id="sheet-overlay" data-action="close-sheet"></div>
+<div class="sheet" id="sheet">
+  <button class="sheet-close" data-action="close-sheet">✕</button>
+  <div class="sheet-handle"></div>
+  <div id="sheet-content"></div>
+</div>
+
+<div class="toast" id="toast">
+  <span id="toast-text"></span>
+  <button data-action="undo-delete">Rückgängig</button>
+</div>
+
+<script>
+// Kindergeld-Satz seit Januar 2026: 259 € pro Kind und Monat (Bundesagentur für Arbeit).
+const KINDERGELD_2026 = 259;
+const ACCOUNT_TYPES_JS = [
+  {id:'spar', label:'Sparkonto & Tagesgeld', color:'var(--pos)'},
+  {id:'depot', label:'Investiert (Depot)', color:'#5C7A99'},
+  {id:'gewerbe', label:'Kleingewerbe', color:'var(--gold)'}
+];
+
+const CATEGORY_DEFAULTS = [
+  {id:'wohnen', label:'Wohnen', color:'#5C7A99', budget:0},
+  {id:'versicherung', label:'Versicherung', color:'#7A6C9E', budget:0},
+  {id:'auto', label:'Auto', color:'#4F7A8C', budget:0},
+  {id:'freizeit', label:'Freizeit', color:'#C9A227', budget:0},
+  {id:'trading', label:'Trading/Datenfeed', color:'#4E9C7C', budget:0},
+  {id:'challenge', label:'Challenges', color:'#B5533C', budget:100},
+  {id:'spontan', label:'Kleinausgaben/Spontan', color:'#D08A52', budget:150},
+  {id:'sonstiges', label:'Sonstiges', color:'#8B94A3', budget:0}
+];
+
+// Kategorien für das Haushaltskonto (v.a. Konsumausgaben)
+const HOUSEHOLD_CATEGORY_DEFAULTS = [
+  {id:'lebensmittel', label:'Lebensmittel', color:'#4E9C7C'},
+  {id:'drogerie', label:'Drogerie', color:'#5C7A99'},
+  {id:'haushalt', label:'Haushaltswaren', color:'#7A6C9E'},
+  {id:'kleidung', label:'Kleidung', color:'#C9A227'},
+  {id:'gesundheit', label:'Gesundheit', color:'#B5533C'},
+  {id:'kinder', label:'Kinder', color:'#D08A52'},
+  {id:'sonstiges', label:'Sonstiges', color:'#8B94A3'}
+];
+
+function defaultFixedCosts(){
+  // amount = Betrag PRO Intervall. interval: 'monat'|'quartal'|'jahr'. anchor = Fälligkeitsmonat (1–12).
+  // scope: 'gemeinsam' | 'privat'. who: 'ich' | 'sophie' (nur bei privat relevant).
+  return [
+    {id:uid(), label:'Miete', category:'wohnen', amount:1300, interval:'monat', anchor:1, scope:'gemeinsam', who:'ich'},
+    {id:uid(), label:'Private Krankenversicherung (inkl. Dienstunfähigkeit)', category:'versicherung', amount:501, interval:'monat', anchor:1, scope:'privat', who:'ich'},
+    {id:uid(), label:'Leasing Auto', category:'auto', amount:430, interval:'monat', anchor:1, scope:'privat', who:'ich'},
+    {id:uid(), label:'Haushaltskonto', category:'wohnen', amount:650, interval:'monat', anchor:1, scope:'gemeinsam', who:'ich'},
+    {id:uid(), label:'Strom', category:'wohnen', amount:45, interval:'monat', anchor:1, scope:'gemeinsam', who:'ich'},
+    {id:uid(), label:'Unfallversicherung', category:'versicherung', amount:24, interval:'monat', anchor:1, scope:'privat', who:'ich'},
+    {id:uid(), label:'Rundfunkbeitrag', category:'wohnen', amount:55, interval:'quartal', anchor:1, scope:'gemeinsam', who:'ich'},
+    {id:uid(), label:'Privathaftpflicht', category:'versicherung', amount:78, interval:'jahr', anchor:1, scope:'gemeinsam', who:'ich'},
+    {id:uid(), label:'Rechtsschutzversicherung', category:'versicherung', amount:160.75, interval:'jahr', anchor:1, scope:'gemeinsam', who:'ich'},
+    {id:uid(), label:'Hausratversicherung', category:'versicherung', amount:170, interval:'jahr', anchor:1, scope:'gemeinsam', who:'ich'},
+    {id:uid(), label:'CrossFit', category:'freizeit', amount:135, interval:'monat', anchor:1, scope:'privat', who:'ich'},
+    {id:uid(), label:'Trainingsprogramm', category:'freizeit', amount:100, interval:'quartal', anchor:1, scope:'privat', who:'ich'},
+    {id:uid(), label:'Datafeed Trading', category:'trading', amount:42, interval:'monat', anchor:1, scope:'privat', who:'ich', note:'~46 $ / Monat'},
+    {id:uid(), label:'Sky TV', category:'freizeit', amount:53, interval:'monat', anchor:1, scope:'privat', who:'ich'},
+    {id:uid(), label:'Netflix', category:'freizeit', amount:5, interval:'monat', anchor:1, scope:'gemeinsam', who:'ich'},
+    {id:uid(), label:'YouTube Premium', category:'freizeit', amount:22, interval:'monat', anchor:1, scope:'gemeinsam', who:'ich'},
+    {id:uid(), label:'Cloud', category:'freizeit', amount:3, interval:'monat', anchor:1, scope:'privat', who:'ich'},
+    {id:uid(), label:'Anschaffungen & Urlaub', category:'sonstiges', amount:200, interval:'monat', anchor:1, scope:'gemeinsam', who:'ich', note:'Rücklage'},
+    {id:uid(), label:'Sprit', category:'auto', amount:250, interval:'monat', anchor:1, scope:'privat', who:'ich', note:'ca. 2–300 € / Monat'},
+    {id:uid(), label:'Autowartung', category:'auto', amount:42.50, interval:'monat', anchor:1, scope:'privat', who:'ich', note:'Rücklage · ~510 €/Jahr'}
+  ];
+}
+function defaultSettings(){
+  return {
+    fixedCosts: defaultFixedCosts(),
+    categories: CATEGORY_DEFAULTS,
+    hhCategories: HOUSEHOLD_CATEGORY_DEFAULTS.map(c=>({...c})),
+    householdBudget: 650,
+    bizTaxRate: 40,
+    bizSaveRate: 20,
+    invest: { ziel: 12000, stand: 0, splitNotgroschen: 50, splitEtf: 40, splitFrei: 10 },
+    household: { partnerName: 'Sophie', incomeB: 0 },
+    projection: { monthly: 300, years: 20, rate: 6 },
+    goals: [
+      {id:uid(), label:'Notgroschen', target:15000, current:0, monthly:300},
+      {id:uid(), label:'Baby-Erstausstattung', target:2000, current:0, monthly:150},
+      {id:uid(), label:'Urlaub', target:2500, current:0, monthly:200}
+    ]
+  };
+}
+function defaultMonth(){
+  return {
+    income:[
+      {id:uid(), label:'Gehalt (netto)', amount:3700, person:'ich'},
+      {id:uid(), label:'Mietanteil Sophie', amount:550, person:'sophie'},
+      {id:uid(), label:'Kindergeld', amount:KINDERGELD_2026, person:'gemeinsam'}
+    ],
+    transactions:[],
+    business:[],
+    household:[]
+  };
+}
+
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function eur(n){ return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(n||0); }
+function monthLabel(key){
+  const [y,m]=key.split('-').map(Number);
+  const names=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  return `${names[m-1]} ${y}`;
+}
+function shiftMonth(key,delta){
+  let [y,m]=key.split('-').map(Number);
+  m+=delta;
+  while(m<1){m+=12;y--;}
+  while(m>12){m-=12;y++;}
+  return `${y}-${String(m).padStart(2,'0')}`;
+}
+function catInfo(catId, categories){ return categories.find(c=>c.id===catId) || categories[categories.length-1]; }
+
+// Lokale, dauerhafte Speicherung im Browser (funktioniert auch als Datei / auf GitHub Pages).
+const KB_PREFIX = 'kassenbuch:';
+async function storageGet(key){
+  try{ const v = localStorage.getItem(KB_PREFIX+key); return v ? JSON.parse(v) : null; }
+  catch(e){ return null; }
+}
+async function storageSet(key,val){
+  try{ localStorage.setItem(KB_PREFIX+key, JSON.stringify(val)); }
+  catch(e){ console.error('Speichern fehlgeschlagen', e); alert('Speichern fehlgeschlagen — evtl. ist der Speicher voll oder privat/Inkognito aktiv.'); }
+}
+function storageList(prefix){
+  const keys=[];
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k && k.startsWith(KB_PREFIX+prefix)) keys.push(k.slice(KB_PREFIX.length));
+  }
+  return {keys};
+}
+
+// ---------- Backup: Sichern / Laden ----------
+function exportBackup(){
+  const data={};
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k && k.startsWith(KB_PREFIX)) data[k.slice(KB_PREFIX.length)] = localStorage.getItem(k);
+  }
+  const payload={ _type:'kassenbuch-backup', _version:2, _date:new Date().toISOString(), data };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`kassenbuch-backup-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+function importBackup(file){
+  const reader=new FileReader();
+  reader.onload=async ()=>{
+    try{
+      const parsed=JSON.parse(reader.result);
+      const data = parsed && parsed.data ? parsed.data : parsed;
+      if(!data || typeof data!=='object') throw new Error('Kein gültiges Backup.');
+      if(!confirm('Backup einspielen? Die aktuellen Daten in diesem Browser werden ersetzt.')) return;
+      Object.keys(data).forEach(k=>{ if(k.startsWith('settings')||k.startsWith('month:')) localStorage.setItem(KB_PREFIX+k, data[k]); });
+      await init();
+    }catch(e){ alert('Import fehlgeschlagen: '+e.message); }
+  };
+  reader.readAsText(file);
+}
+
+// ---------- Haushaltskonto: CSV-Import (ING-Umsatzexport) ----------
+function readFileAsText(file, encoding){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = ()=>resolve(r.result);
+    r.onerror = ()=>reject(r.error);
+    if(encoding) r.readAsText(file, encoding); else r.readAsText(file);
+  });
+}
+function parseCsvLine(line, delim){
+  const out=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(inQ){
+      if(ch==='"'){ if(line[i+1]==='"'){ cur+='"'; i++; } else { inQ=false; } }
+      else cur+=ch;
+    } else {
+      if(ch==='"') inQ=true;
+      else if(ch===delim){ out.push(cur); cur=''; }
+      else cur+=ch;
+    }
+  }
+  out.push(cur);
+  return out.map(s=>s.trim());
+}
+function parseGermanAmount(s){
+  if(s===undefined||s===null) return NaN;
+  const cleaned = String(s).replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',', '.');
+  return parseFloat(cleaned);
+}
+function guessHhCategory(label){
+  const l=(label||'').toUpperCase();
+  const RULES = [
+    [/REWE|EDEKA|ALDI|LIDL|NETTO|KAUFLAND|PENNY|NORMA|BIO\s?COMPANY|DENNS|DENN'S/,'lebensmittel'],
+    [/\bDM\b|ROSSMANN|MUELLER|M[UÜ]LLER|BUDNI/,'drogerie'],
+    [/APOTHEKE|SANIT[AÄ]TS/,'gesundheit'],
+    [/H&M|ZARA|C&A|PRIMARK|ABOUT YOU|ZALANDO|DEICHMANN|SNIPES/,'kleidung'],
+    [/IKEA|OBI\b|HORNBACH|BAUHAUS|POCO|XXXLUTZ|KIK\b|TEDI/,'haushalt'],
+    [/KITA|KINDERGARTEN|SPIELZEUG|BABY/,'kinder']
+  ];
+  for(const [re,cat] of RULES){ if(re.test(l)) return cat; }
+  return 'sonstiges';
+}
+// Erwartet den Umsatzexport aus dem ING-Onlinebanking (CSV, Spalten u.a. "Buchung"/"Betrag").
+function parseIngCsv(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim().length);
+  if(!lines.length) throw new Error('Datei ist leer.');
+  const delim = lines[0].includes(';') ? ';' : ',';
+  let headerIdx=-1, cols=[];
+  for(let i=0;i<lines.length;i++){
+    const parts = parseCsvLine(lines[i], delim);
+    if(parts.some(p=>/^buchung$/i.test(p)) && parts.some(p=>/betrag/i.test(p))){ headerIdx=i; cols=parts; break; }
+  }
+  if(headerIdx===-1) throw new Error('Kein ING-Kontoauszug erkannt (Spalte „Buchung" fehlt). Bitte den CSV-Export aus dem ING-Onlinebanking verwenden.');
+  const iDate = cols.findIndex(c=>/^buchung$/i.test(c));
+  const iWho = cols.findIndex(c=>/Auftraggeber|Empf[aä]nger/i.test(c));
+  const iPurpose = cols.findIndex(c=>/Verwendungszweck/i.test(c));
+  const iText = cols.findIndex(c=>/Buchungstext/i.test(c));
+  let iAmount=-1; for(let k=cols.length-1;k>=0;k--){ if(/betrag/i.test(cols[k])){ iAmount=k; break; } }
+  if(iDate===-1 || iAmount===-1) throw new Error('Spalten „Buchung"/„Betrag" nicht gefunden.');
+  const out=[];
+  for(let i=headerIdx+1;i<lines.length;i++){
+    const parts = parseCsvLine(lines[i], delim);
+    if(parts.length<2) continue;
+    const m = (parts[iDate]||'').match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if(!m) continue;
+    const date = `${m[3]}-${m[2]}-${m[1]}`;
+    const amount = parseGermanAmount(parts[iAmount]);
+    if(!isFinite(amount) || amount>=0) continue; // nur echte Ausgaben, keine Eingänge/Übertrag
+    const who = (iWho>=0 ? parts[iWho] : '').trim();
+    const purpose = (iPurpose>=0 ? parts[iPurpose] : '').trim();
+    const txt = (iText>=0 ? parts[iText] : '').trim();
+    const label = (who || purpose || txt || 'Ausgabe').slice(0,60);
+    out.push({ date, label, amount: Math.round(Math.abs(amount)*100)/100 });
+  }
+  return out;
+}
+async function importHouseholdCsv(file){
+  let text;
+  try{ text = await readFileAsText(file, 'UTF-8'); }
+  catch(e){ alert('Datei konnte nicht gelesen werden.'); return; }
+  if(text.indexOf('\uFFFD')!==-1){ // Mojibake-Anzeichen -> als ISO-8859-1 erneut lesen
+    try{ text = await readFileAsText(file, 'ISO-8859-1'); }catch(e){}
+  }
+  let rows;
+  try{ rows = parseIngCsv(text); }
+  catch(e){ alert('Import fehlgeschlagen: '+e.message); return; }
+  if(!rows.length){ alert('Keine Ausgaben gefunden — es werden nur Buchungen mit negativem Betrag importiert.'); return; }
+
+  const byMonth = {};
+  rows.forEach(r=>{ (byMonth[r.date.slice(0,7)]=byMonth[r.date.slice(0,7)]||[]).push(r); });
+
+  let added=0, skipped=0;
+  for(const mk of Object.keys(byMonth)){
+    const isCurrent = mk===currentMonthKey;
+    let d = isCurrent ? monthData : await storageGet(`month:${mk}`);
+    if(!d) d = defaultMonth();
+    if(!d.household) d.household=[];
+    const existingKeys = new Set(d.household.map(h=>`${h.date}|${h.label}|${Number(h.amount).toFixed(2)}`));
+    byMonth[mk].forEach(r=>{
+      const key = `${r.date}|${r.label}|${r.amount.toFixed(2)}`;
+      if(existingKeys.has(key)){ skipped++; return; }
+      d.household.push({id:uid(), date:r.date, label:r.label, category:guessHhCategory(r.label), amount:r.amount, source:'csv'});
+      existingKeys.add(key); added++;
+    });
+    await storageSet(`month:${mk}`, d);
+    if(isCurrent) monthData = d;
+  }
+  await loadHistory(); render();
+  alert(`Import abgeschlossen: ${added} neue Ausgabe${added===1?'':'n'} übernommen${skipped?`, ${skipped} Duplikat${skipped===1?'':'e'} übersprungen`:''}.`);
+}
+
+// ---------- Haushaltskonto: Screenshot-Import (Anthropic Vision API) ----------
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = ()=>resolve(String(r.result).split(',')[1]);
+    r.onerror = ()=>reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
+async function analyzeReceiptScreenshot(file){
+  const base64 = await fileToBase64(file);
+  const mediaType = file.type || 'image/jpeg';
+  const today = new Date().toISOString().slice(0,10);
+  const sysPrompt = `Du extrahierst Bankbuchungen aus einem Screenshot einer Banking-App (Umsatzliste). Heutiges Datum: ${today}.
+Gib AUSSCHLIESSLICH ein JSON-Array zurück — keine Erklärung, kein Markdown, kein Text davor oder danach.
+Jedes Element: {"date":"YYYY-MM-DD","label":"Empfänger/Bezeichnung","amount":Zahl}.
+- amount: immer positiv, nur der Betrag der Ausgabe (Beträge mit Minus im Screenshot).
+- Nur echte Ausgaben/Lastschriften/Kartenzahlungen aufnehmen — KEINE Gehaltseingänge, Gutschriften, Überweisungen an sich selbst, Kontostände oder Summenzeilen.
+- Relative Datumsangaben ("Heute", "Gestern", Wochentage) anhand des heutigen Datums in YYYY-MM-DD umrechnen. Fehlt das Jahr, aktuelles Jahr annehmen.
+- Ist ein Betrag oder Datum nicht sicher lesbar, den Eintrag weglassen.
+- Wenn keine Buchungen erkennbar sind, gib [] zurück.`;
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens:1000,
+      system: sysPrompt,
+      messages:[{
+        role:'user',
+        content:[
+          {type:'image', source:{type:'base64', media_type:mediaType, data:base64}},
+          {type:'text', text:'Extrahiere alle Ausgaben aus diesem Screenshot als JSON-Array.'}
+        ]
+      }]
+    })
+  });
+  if(!response.ok) throw new Error('API-Anfrage fehlgeschlagen ('+response.status+').');
+  const data = await response.json();
+  const textBlocks = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+  const cleaned = textBlocks.replace(/```json|```/g,'').trim();
+  let rows;
+  try{ rows = JSON.parse(cleaned); }catch(e){ throw new Error('Antwort konnte nicht gelesen werden.'); }
+  if(!Array.isArray(rows)) throw new Error('Unerwartetes Format in der Antwort.');
+  return rows.filter(r=>r && r.date!=null && r.amount!=null).map(r=>({
+    date: String(r.date).slice(0,10),
+    label: String(r.label||'Ausgabe').slice(0,60),
+    amount: Math.round(Math.abs(parseFloat(r.amount))*100)/100
+  })).filter(r=>isFinite(r.amount) && r.amount>0 && /^\d{4}-\d{2}-\d{2}$/.test(r.date));
+}
+function openScreenshotReview(rows){
+  const hhCategories = settings.hhCategories || HOUSEHOLD_CATEGORY_DEFAULTS;
+  if(!rows.length){
+    openSheet('Screenshot-Import', `<div class="hint">Es wurden keine Ausgaben erkannt. Versuch es mit einem schärferen oder vollständigeren Screenshot.</div>`, null);
+    return;
+  }
+  const rowsHtml = rows.map((r,idx)=>`
+    <div class="fg-item" style="padding:10px 0;border-top:${idx?'1px solid var(--line)':'none'};">
+      <div class="fg-item-name-row">
+        <input type="checkbox" id="sr-inc-${idx}" checked style="width:18px;height:18px;flex-shrink:0;">
+        <input type="text" id="sr-label-${idx}" value="${escAttr(r.label)}" class="fg-name" style="background:var(--panel);border:1px solid var(--line);border-radius:7px;">
+      </div>
+      <div class="fg-item-controls">
+        <input type="date" id="sr-date-${idx}" value="${r.date}" style="background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:12.5px;">
+        <select id="sr-cat-${idx}" class="fg-cat-sel">
+          ${hhCategories.map(cc=>`<option value="${cc.id}" ${cc.id===guessHhCategory(r.label)?'selected':''}>${cc.label}</option>`).join('')}
+        </select>
+        <div class="fg-amt-wrap"><input type="number" step="0.01" id="sr-amount-${idx}" class="fg-amt" value="${r.amount}"></div>
+      </div>
+    </div>`).join('');
+  openSheet('Screenshot-Import prüfen', `
+    <div class="hint" style="margin-bottom:6px;">${rows.length} Buchung${rows.length===1?'':'en'} erkannt — prüfen, anpassen, dann übernehmen. Häkchen entfernen, um einzelne Posten zu überspringen.</div>
+    ${rowsHtml}
+    <button class="sheet-submit" data-action="sheet-submit" style="margin-top:14px;">Übernehmen</button>
+  `, async ()=>{
+    monthData.household = monthData.household || [];
+    const existingKeys = new Set(monthData.household.map(h=>`${h.date}|${h.label}|${Number(h.amount).toFixed(2)}`));
+    let added=0;
+    const targets = {};
+    for(let idx=0; idx<rows.length; idx++){
+      const inc = document.getElementById(`sr-inc-${idx}`);
+      if(!inc || !inc.checked) continue;
+      const date = document.getElementById(`sr-date-${idx}`).value;
+      const label = document.getElementById(`sr-label-${idx}`).value.trim() || 'Ausgabe';
+      const category = document.getElementById(`sr-cat-${idx}`).value;
+      const amount = parseFloat(document.getElementById(`sr-amount-${idx}`).value)||0;
+      if(!date || amount<=0) continue;
+      const mk = date.slice(0,7);
+      if(mk===currentMonthKey){
+        const key = `${date}|${label}|${amount.toFixed(2)}`;
+        if(existingKeys.has(key)) continue;
+        monthData.household.push({id:uid(), date, label, category, amount, source:'screenshot'});
+        existingKeys.add(key); added++;
+      } else {
+        (targets[mk]=targets[mk]||[]).push({date, label, category, amount});
+      }
+    }
+    await storageSet(`month:${currentMonthKey}`, monthData);
+    for(const mk of Object.keys(targets)){
+      let d = await storageGet(`month:${mk}`); if(!d) d = defaultMonth();
+      if(!d.household) d.household=[];
+      const exK = new Set(d.household.map(h=>`${h.date}|${h.label}|${Number(h.amount).toFixed(2)}`));
+      targets[mk].forEach(r=>{
+        const key = `${r.date}|${r.label}|${r.amount.toFixed(2)}`;
+        if(exK.has(key)) return;
+        d.household.push({id:uid(), date:r.date, label:r.label, category:r.category, amount:r.amount, source:'screenshot'});
+        exK.add(key); added++;
+      });
+      await storageSet(`month:${mk}`, d);
+    }
+    await loadHistory(); closeSheet(); render();
+    setTimeout(()=>alert(`${added} Ausgabe${added===1?'':'n'} übernommen.`), 50);
+  });
+}
+async function handleScreenshotFile(file){
+  openSheet('Screenshot wird analysiert…', `<div class="hint">Das kann ein paar Sekunden dauern.</div>`, null);
+  try{
+    const rows = await analyzeReceiptScreenshot(file);
+    openScreenshotReview(rows);
+  }catch(e){
+    closeSheet();
+    alert('Screenshot-Analyse fehlgeschlagen: '+e.message);
+  }
+}
+
+// ---------- Konto-Bewegungen (Spar-, Depot-, Kleingewerbe-Konto etc.) ----------
+function openAccountLedger(accId){
+  const acc = (settings.accounts||[]).find(a=>a.id===accId);
+  if(!acc) return;
+  monthData.accountTx = monthData.accountTx || {};
+  const list = (monthData.accountTx[accId]||[]).slice().sort((a,b)=>a.date<b.date?1:-1);
+  const einSum = list.filter(t=>(t.type||'ein')!=='aus').reduce((s,t)=>s+Number(t.amount||0),0);
+  const ausSum = list.filter(t=>t.type==='aus').reduce((s,t)=>s+Number(t.amount||0),0);
+  const netto = einSum-ausSum;
+  const rowsHtml = list.map(t=>{
+    const isAus = t.type==='aus';
+    return `
+    <div class="fg-item" style="padding:8px 0;">
+      <div class="fg-item-name-row">
+        <span class="dot" style="background:${isAus?'var(--neg)':'var(--pos)'}"></span>
+        <span style="flex:1;font-size:13.5px;">${escHtml(t.label)} <span class="note" style="display:inline">${t.date}</span></span>
+        <span class="amount-txt" style="color:${isAus?'var(--neg)':'var(--pos)'}">${isAus?'−':'+'}${eur(t.amount)}</span>
+        <button class="del-btn" data-action="del-acctx" data-acc="${accId}" data-id="${t.id}">✕</button>
+      </div>
+    </div>`;}).join('');
+  openSheet(`${escHtml(acc.label)} — Bewegungen`, `
+    <div class="hint" style="margin-bottom:10px;">${monthLabel(currentMonthKey)} · Einzahlungen ${eur(einSum)} · Auszahlungen ${eur(ausSum)}</div>
+    ${rowsHtml || '<div class="hint">Noch keine Bewegungen in diesem Monat erfasst.</div>'}
+    <div style="border-top:1px solid var(--line);margin:14px 0 12px;padding-top:14px;">
+      <div class="field"><label>Bezeichnung</label><input type="text" id="s-acctx-label" placeholder="z. B. Sparrate" autofocus></div>
+      <div class="field"><label>Betrag (€)</label><input type="number" step="0.01" inputmode="decimal" id="s-acctx-amount" placeholder="0,00"></div>
+      <div class="field"><label>Datum</label><input type="date" id="s-acctx-date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="field"><label>Art</label>
+        <div class="chip-grid">
+          <button type="button" class="cchip selected" data-action="sheet-chip" data-type="ein"><span class="dot" style="background:var(--pos)"></span>Einzahlung</button>
+          <button type="button" class="cchip" data-action="sheet-chip" data-type="aus"><span class="dot" style="background:var(--neg)"></span>Auszahlung</button>
+        </div>
+      </div>
+      <button class="sheet-submit" data-action="add-acctx" data-acc="${accId}">Buchung hinzufügen</button>
+    </div>
+    <div class="split-hint">Netto diesen Monat: <b style="color:${netto>=0?'var(--pos)':'var(--neg)'}">${netto>=0?'+':''}${eur(netto)}</b></div>
+    <button class="add-btn" style="width:100%;margin-top:10px;" data-action="apply-acctx" data-acc="${accId}">In Kontostand übernehmen → ${eur(Number(acc.amount||0)+netto)}</button>
+  `, null);
+}
+
+let settings = null;
+let currentMonthKey = null;
+let monthData = null;
+let history = []; // {key, balance}
+let expandedGroups = new Set(); // aufgeklappte Fixkosten-Kategorien
+let activeTab = localStorage.getItem('kassenbuch:ui:tab') || 'monat';
+
+// ---------- Bottom Sheet ----------
+let sheetSubmitHandler = null;
+function openSheet(titleHtml, bodyHtml, onSubmit){
+  document.getElementById('sheet-content').innerHTML = `<h3>${titleHtml}</h3>${bodyHtml}`;
+  document.getElementById('sheet-overlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+  sheetSubmitHandler = onSubmit;
+}
+function closeSheet(){
+  document.getElementById('sheet-overlay').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+  sheetSubmitHandler = null;
+}
+
+// ---------- Toast mit Rückgängig ----------
+let toastTimer = null;
+let lastUndo = null; // {restore: fn}
+function showUndoToast(text, restoreFn){
+  lastUndo = {restore: restoreFn};
+  document.getElementById('toast-text').textContent = text;
+  document.getElementById('toast').classList.add('open');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ document.getElementById('toast').classList.remove('open'); lastUndo=null; }, 5000);
+}
+function hideToast(){
+  document.getElementById('toast').classList.remove('open');
+  clearTimeout(toastTimer);
+}
+
+// Zwei-Schritt-Löschen: erster Tap "bewaffnet" den Button, zweiter Tap (innerhalb 3s) löscht wirklich.
+let armedDelBtn = null, armedTimer = null;
+function disarm(){
+  if(armedDelBtn){ armedDelBtn.classList.remove('armed'); armedDelBtn.textContent='✕'; }
+  armedDelBtn=null; clearTimeout(armedTimer);
+}
+function handleDeleteTap(btn){
+  if(armedDelBtn===btn){
+    disarm();
+    return true; // bestätigt -> jetzt wirklich löschen
+  }
+  disarm();
+  armedDelBtn = btn;
+  btn.classList.add('armed'); btn.textContent='Sicher?';
+  armedTimer = setTimeout(disarm, 3000);
+  return false;
+}
+
+function currentMonthKeyDefault(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+async function init(){
+  settings = await storageGet('settings');
+  if(!settings){ settings = defaultSettings(); await storageSet('settings', settings); }
+  // Migration: neue Felder für bestehende Daten ergänzen
+  let migrated = false;
+  if(settings.bizTaxRate === undefined){ settings.bizTaxRate = 40; migrated = true; }
+  if(settings.bizSaveRate === undefined){ settings.bizSaveRate = 20; migrated = true; }
+  if(!settings.invest){ settings.invest = { ziel: 12000, stand: 0, splitNotgroschen: 50, splitEtf: 40, splitFrei: 10 }; migrated = true; }
+  if(!settings.accounts){
+    settings.accounts = [
+      {id:uid(), label:'Sparkonto', type:'spar', amount: Number(settings.invest.stand)||0},
+      {id:uid(), label:'Depot (ETF & Co.)', type:'depot', amount: 0},
+      {id:uid(), label:'Kleingewerbe-Konto', type:'gewerbe', amount: 0}
+    ];
+    migrated = true;
+  }
+  if(!settings.household){ settings.household = { partnerName:'Sophie', incomeB:0 }; migrated=true; }
+  if(!settings.hhCategories){ settings.hhCategories = HOUSEHOLD_CATEGORY_DEFAULTS.map(c=>({...c})); migrated=true; }
+  if(settings.householdBudget===undefined){ settings.householdBudget = 650; migrated=true; }
+  if(!settings.projection){ settings.projection = { monthly:300, years:20, rate:6 }; migrated=true; }
+  if(!settings.goals){
+    settings.goals = [
+      {id:uid(), label:'Notgroschen', target:15000, current:0, monthly:300},
+      {id:uid(), label:'Baby-Erstausstattung', target:2000, current:0, monthly:150},
+      {id:uid(), label:'Urlaub', target:2500, current:0, monthly:200}
+    ];
+    migrated=true;
+  }
+  // Migration: Kategorie-Budgets (Monatslimit fürs Variable)
+  (settings.categories||[]).forEach(c=>{
+    if(c.budget===undefined){
+      c.budget = c.id==='challenge' ? 100 : c.id==='spontan' ? 150 : 0;
+      migrated=true;
+    }
+  });
+  // Migration: Fixkosten auf Intervalle heben (aus alter Notiz ableiten)
+  const SHARED_LABELS = ['Miete','Haushaltskonto','Strom','Rundfunkbeitrag','Privathaftpflicht','Rechtsschutzversicherung','Hausratversicherung','Anschaffungen & Urlaub','Netflix','YouTube Premium'];
+  (settings.fixedCosts||[]).forEach(fc=>{
+    if(fc.interval===undefined){ detectInterval(fc); migrated=true; }
+    if(fc.anchor===undefined){ fc.anchor=1; migrated=true; }
+    if(fc.scope===undefined){ fc.scope = SHARED_LABELS.includes(fc.label)?'gemeinsam':'privat'; migrated=true; }
+    if(fc.who===undefined){ fc.who='ich'; migrated=true; }
+  });
+  if(migrated) await storageSet('settings', settings);
+  currentMonthKey = currentMonthKeyDefault();
+  await loadMonth(currentMonthKey);
+  await loadHistory();
+  render();
+}
+
+// Haushaltskonto: Soll-Kontostand am Monatsende (nutzt echten Bankstand, falls eingetragen)
+function hhClosingBalance(d){
+  const opening = Number(d.hhOpening||0);
+  const inflow = Number(d.hhInflow!==undefined ? d.hhInflow : ((settings&&settings.householdBudget)||650));
+  const spent = (d.household||[]).reduce((s,h)=>s+Number(h.amount||0),0);
+  const soll = opening + inflow - spent;
+  const actual = (d.hhActualBalance===null||d.hhActualBalance===undefined||d.hhActualBalance==='') ? null : Number(d.hhActualBalance);
+  return actual!==null ? actual : soll;
+}
+
+async function loadMonth(key){
+  let d = await storageGet(`month:${key}`);
+  if(!d){
+    // Neuer Monat: wiederkehrende Einnahmen (Gehalt, Kindergeld, Übertrag) aus dem Vormonat übernehmen
+    const prev = await storageGet(`month:${shiftMonth(key,-1)}`);
+    if(prev && (prev.income||[]).length){
+      d = { income: prev.income.map(i=>({id:uid(), label:i.label, amount:Number(i.amount||0), person:i.person||'ich'})),
+            transactions:[], business:[], household:[] };
+    } else {
+      d = defaultMonth();
+    }
+    // Haushaltskonto: Anfangsbestand = Schlussstand des Vormonats (echter Bankstand, falls eingetragen)
+    d.hhOpening = prev ? Math.round(hhClosingBalance(prev)*100)/100 : 0;
+    d.hhInflow = (settings && settings.householdBudget) || 650;
+    d.hhActualBalance = null;
+    await storageSet(`month:${key}`, d);
+  }
+  if(!d.business) d.business = [];
+  if(!d.household) d.household = [];
+  if(!d.accountTx) d.accountTx = {};
+  if(d.hhOpening===undefined) d.hhOpening = 0;
+  if(d.hhInflow===undefined) d.hhInflow = (settings && settings.householdBudget) || 650;
+  if(d.hhActualBalance===undefined) d.hhActualBalance = null;
+  // Migration: Einnahmen einer Person zuordnen (Partner-Übertrag erkennen)
+  let mig=false;
+  const pName = (settings && settings.household && settings.household.partnerName) || 'Sophie';
+  (d.income||[]).forEach(i=>{
+    if(i.person===undefined){
+      const l=(i.label||'').toLowerCase();
+      i.person = (l.includes(pName.toLowerCase()) || l.includes('partner') || l.includes('anteil')) ? 'sophie' : 'ich';
+      mig=true;
+    }
+  });
+  if(mig) await storageSet(`month:${key}`, d);
+  currentMonthKey = key;
+  monthData = d;
+}
+
+async function loadHistory(){
+  history = [];
+  for(let i=5;i>=0;i--){
+    const key = shiftMonth(currentMonthKey, -i);
+    const d = (key===currentMonthKey) ? monthData : await storageGet(`month:${key}`);
+    if(d){
+      const t = totals(d, key);
+      history.push({key, balance:t.balanceActual});
+    } else {
+      history.push({key, balance:null});
+    }
+  }
+}
+
+// Geglätteter Monatsbetrag (Quartal/Jahr auf den Monat umgelegt)
+function fcMonthly(fc){
+  const amt=Number(fc.amount||0), iv=fc.interval||'monat';
+  return iv==='jahr' ? amt/12 : iv==='quartal' ? amt/3 : amt;
+}
+// Tatsächlich in diesem Monat fällig (echter Kontoabgang)
+function fcDueThisMonth(fc, monthKey){
+  const iv=fc.interval||'monat', amt=Number(fc.amount||0);
+  if(iv==='monat') return amt;
+  const m=Number(monthKey.split('-')[1]);
+  const anchor=Number(fc.anchor||1);
+  if(iv==='jahr') return m===anchor ? amt : 0;
+  return ((m-anchor)%3+3)%3===0 ? amt : 0; // Quartal: anchor, +3, +6, +9
+}
+// Alt-Daten (nur Monatsbetrag + Notiz) einmalig auf Intervalle heben
+function detectInterval(fc){
+  fc.interval='monat';
+  const note=fc.note||'';
+  const parseNum=s=>parseFloat(String(s).replace(/\./g,'').replace(',','.'));
+  const mQ=note.match(/([\d.,]+)\s*€\s*\/\s*Quartal/i);
+  const mJ=note.match(/([\d.,]+)\s*€\s*\/\s*Jahr/i);
+  if(mQ){ fc.interval='quartal'; fc.amount=parseNum(mQ[1]); delete fc.note; }
+  else if(mJ){ fc.interval='jahr'; fc.amount=parseNum(mJ[1]); delete fc.note; }
+}
+
+function totals(d, monthKey){
+  const list = settings.fixedCosts||[];
+  const incomeTotal = (d.income||[]).reduce((s,i)=>s+Number(i.amount||0),0);
+  const fixedSmooth = list.reduce((s,f)=>s+fcMonthly(f),0);
+  const fixedDue    = list.reduce((s,f)=>s+fcDueThisMonth(f, monthKey),0);
+  const variableTotal = (d.transactions||[]).reduce((s,i)=>s+Number(i.amount||0),0);
+  const expenseActual = fixedDue + variableTotal;      // echter Kassenabgang
+  const expenseSmooth = fixedSmooth + variableTotal;   // planbarer Durchschnitt
+  const balanceActual = incomeTotal - expenseActual;
+  const balanceSmooth = incomeTotal - expenseSmooth;
+  const byCat = {}; // Kategorienverteilung geglättet, damit Monate vergleichbar bleiben
+  list.forEach(f=>{ byCat[f.category]=(byCat[f.category]||0)+fcMonthly(f); });
+  (d.transactions||[]).forEach(t=>{ byCat[t.category]=(byCat[t.category]||0)+Number(t.amount||0); });
+  return { incomeTotal, fixedSmooth, fixedDue, variableTotal, expenseActual, expenseSmooth, balanceActual, balanceSmooth, byCat };
+}
+
+async function yearChallengeStats(){
+  const year = currentMonthKey.split('-')[0];
+  let count=0, total=0;
+  try{
+    const list = storageList(`month:${year}-`);
+    if(list && list.keys){
+      for(const k of list.keys){
+        const d = await storageGet(k);
+        if(d){ (d.transactions||[]).forEach(t=>{ if(t.category==='challenge'){count++; total+=Number(t.amount||0);} }); }
+      }
+    }
+  }catch(e){}
+  return {count,total};
+}
+
+async function yearBusinessStats(){
+  const year = currentMonthKey.split('-')[0];
+  let ein=0, aus=0;
+  try{
+    const list = storageList(`month:${year}-`);
+    if(list && list.keys){
+      for(const k of list.keys){
+        const d = (k===`month:${currentMonthKey}`) ? monthData : await storageGet(k);
+        if(d){ (d.business||[]).forEach(b=>{ if((b.type||'ein')==='aus') aus+=Number(b.amount||0); else ein+=Number(b.amount||0); }); }
+      }
+    }
+  }catch(e){}
+  return { ein, aus, total: ein-aus }; // total = Gewinn (Einnahmen − Ausgaben)
+}
+
+async function yearSummary(){
+  const year = currentMonthKey.split('-')[0];
+  let inc=0, exp=0, months=0;
+  try{
+    const list = storageList(`month:${year}-`);
+    if(list && list.keys){
+      for(const k of list.keys){
+        const key = k.replace('month:','');
+        const d = (k===`month:${currentMonthKey}`) ? monthData : await storageGet(k);
+        if(d){ const tt=totals(d,key); inc+=tt.incomeTotal; exp+=tt.expenseActual; months++; }
+      }
+    }
+  }catch(e){}
+  return { inc, exp, months, save: inc-exp };
+}
+
+// ---------- Rendering ----------
+async function render(){
+  const app = document.getElementById('app');
+  const t = totals(monthData, currentMonthKey);
+  const balClass = t.balanceActual>=0 ? 'pos':'neg';
+  const balWord = t.balanceActual>=0 ? 'Überschuss':'Fehlbetrag';
+  const sparquote = t.incomeTotal>0 ? Math.round(t.balanceSmooth/t.incomeTotal*100) : 0;
+
+  const partnerNm = escHtml((settings.household&&settings.household.partnerName)||'Partner');
+  const incomeRow = i=>{
+    const p = i.person||'ich';
+    return `
+    <tr class="row" data-kind="income" data-id="${i.id}">
+      <td class="name-cell">
+        <input type="text" value="${escAttr(i.label)}" data-field="label">
+        <select class="who-sel ${p==='gemeinsam'?'gemeinsam':''}" data-field="person">
+          <option value="ich" ${p==='ich'?'selected':''}>Ich</option>
+          <option value="sophie" ${p==='sophie'?'selected':''}>${partnerNm}</option>
+          <option value="gemeinsam" ${p==='gemeinsam'?'selected':''}>Gemeinsam</option>
+        </select>
+      </td>
+      <td class="amount"><input type="number" step="0.01" inputmode="decimal" value="${i.amount}" data-field="amount"></td>
+      <td style="width:38px"><button class="del-btn" data-action="del-income" data-id="${i.id}">✕</button></td>
+    </tr>`;};
+  const ownIncomeList    = (monthData.income||[]).filter(i=>(i.person||'ich')!=='gemeinsam');
+  const sharedIncomeList = (monthData.income||[]).filter(i=>i.person==='gemeinsam');
+  const incomeRows       = ownIncomeList.map(incomeRow).join('');
+  const sharedIncomeRows = sharedIncomeList.map(incomeRow).join('');
+  const sharedIncome     = sharedIncomeList.reduce((s,i)=>s+Number(i.amount||0),0);
+  const ownIncomeSum     = ownIncomeList.reduce((s,i)=>s+Number(i.amount||0),0);
+
+  // Fixkosten nach Kategorie gruppieren, größte Gruppe zuerst
+  const IV_LABEL = {monat:'mtl.', quartal:'/Quartal', jahr:'/Jahr'};
+  const MONTHS_SHORT = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  const MONTHS_LONG = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const curM = Number(currentMonthKey.split('-')[1]);
+  const fixedGroups = {};
+  settings.fixedCosts.forEach(f=>{
+    (fixedGroups[f.category] = fixedGroups[f.category] || []).push(f);
+  });
+  const fixedRows = Object.entries(fixedGroups)
+    .map(([catId, items])=>({
+      catId,
+      cat: catInfo(catId, settings.categories),
+      items: items.slice().sort((a,b)=>fcMonthly(b)-fcMonthly(a)),
+      subMonthly: items.reduce((s,i)=>s+fcMonthly(i),0),
+      subDue: items.reduce((s,i)=>s+fcDueThisMonth(i, currentMonthKey),0)
+    }))
+    .sort((a,b)=>b.subMonthly-a.subMonthly)
+    .map((g)=>{
+      const open = expandedGroups.has(g.catId);
+      const thisMonthName = MONTHS_LONG[curM-1];
+      // Hinweis nur, wenn in diesem Monat mehr abgeht als der Durchschnitt (Quartals-/Jahresrechnung)
+      const dueLine = (g.subDue > g.subMonthly + 0.5)
+        ? `<span class="fg-due">im ${thisMonthName} werden ${eur(g.subDue)} abgebucht</span>` : '';
+      const itemsHtml = !open ? '' : g.items.map(f=>{
+        const iv=f.interval||'monat';
+        const due = fcDueThisMonth(f, currentMonthKey)>0;
+        const scope=f.scope||'gemeinsam', who=f.who||'ich';
+        const pName=escHtml(settings.household.partnerName||'Partner');
+        const scopeSel = `<span class="scope-wrap"><select class="scope-sel ${scope}" data-field="scope">
+             <option value="gemeinsam" ${scope==='gemeinsam'?'selected':''}>Gemeinsam</option>
+             <option value="privat" ${scope==='privat'?'selected':''}>Privat</option>
+           </select>${scope==='privat'?`<select class="who-sel" data-field="who">
+             <option value="ich" ${who==='ich'?'selected':''}>Ich</option>
+             <option value="sophie" ${who==='sophie'?'selected':''}>${pName}</option>
+           </select>`:''}</span>`;
+        const ivMeta = iv==='monat'
+          ? (f.note?`<span class="note">${escHtml(f.note)}</span>`:'')
+          : `<span class="note">${eur(f.amount)} ${iv==='jahr'?'pro Jahr':'pro Quartal'} — entspricht ${eur(fcMonthly(f))} pro Monat.<br>
+               Abbuchung im
+               <select class="anchor-sel" data-field="anchor">
+                 ${MONTHS_SHORT.map((mn,idx)=>`<option value="${idx+1}" ${(idx+1)===Number(f.anchor||1)?'selected':''}>${mn}</option>`).join('')}
+               </select>${iv==='quartal'?' und danach alle 3 Monate':''}${due?' <b class="due-now">— also in diesem Monat</b>':''}</span>`;
+        return `
+    <div class="fg-item" data-kind="fixed" data-id="${f.id}">
+      <div class="fg-item-name-row">
+        <input type="text" class="fg-name" value="${escAttr(f.label)}" data-field="label">
+        <button class="del-btn" data-action="del-fixed" data-id="${f.id}">✕</button>
+      </div>
+      <div class="fg-item-meta">${ivMeta}${scopeSel}</div>
+      <div class="fg-item-controls">
+        <select class="fg-cat-sel" data-field="category">
+          ${settings.categories.map(cc=>`<option value="${cc.id}" ${cc.id===f.category?'selected':''}>${cc.label}</option>`).join('')}
+        </select>
+        <div class="fg-amt-wrap">
+          <input type="number" step="0.01" inputmode="decimal" class="fg-amt" value="${f.amount}" data-field="amount">
+          <select class="iv-sel" data-field="interval">
+            <option value="monat" ${iv==='monat'?'selected':''}>mtl.</option>
+            <option value="quartal" ${iv==='quartal'?'selected':''}>/Qtl</option>
+            <option value="jahr" ${iv==='jahr'?'selected':''}>/Jahr</option>
+          </select>
+        </div>
+      </div>
+    </div>`;}).join('');
+      return `
+    <div class="fg-card ${open?'open':''}">
+      <button class="fg-head" data-action="toggle-group" data-cat="${g.catId}">
+        <span class="fg-badge" style="background:${g.cat.color}26;color:${g.cat.color}">${escHtml(g.cat.label.slice(0,1).toUpperCase())}</span>
+        <span class="fg-head-text">
+          <span class="fg-title">${escHtml(g.cat.label)}</span>
+          <span class="fg-sub">${g.items.length} ${g.items.length===1?'Posten':'Posten'}</span>
+          ${dueLine}
+        </span>
+        <span class="fg-head-amt">${eur(g.subMonthly)}</span>
+        <span class="fg-chevron">▾</span>
+      </button>
+      <div class="fg-items fade-in">${itemsHtml}</div>
+    </div>`;
+    }).join('');
+  const anyOpen = expandedGroups.size>0;
+
+  const txRows = monthData.transactions.slice().sort((a,b)=>a.date<b.date?1:-1).map(tx=>{
+    const c = catInfo(tx.category, settings.categories);
+    return `
+    <tr class="row" data-kind="tx" data-id="${tx.id}">
+      <td style="width:98px"><input type="date" value="${tx.date}" data-field="date"></td>
+      <td class="name-cell" style="display:flex;align-items:center;"><span class="dot" style="background:${c.color};flex-shrink:0;"></span><input type="text" value="${escAttr(tx.label)}" data-field="label"></td>
+      <td style="width:150px">
+        <select data-field="category">
+          ${settings.categories.map(cc=>`<option value="${cc.id}" ${cc.id===tx.category?'selected':''}>${cc.label}</option>`).join('')}
+        </select>
+      </td>
+      <td class="amount"><input type="number" step="0.01" inputmode="decimal" value="${tx.amount}" data-field="amount"></td>
+      <td style="width:38px"><button class="del-btn" data-action="del-tx" data-id="${tx.id}">✕</button></td>
+    </tr>`;}).join('');
+
+  // Haushaltskonto: Konsumausgaben separat vom Kassensturz (fließt nicht in totals() ein — die
+  // 650€-Überweisung dorthin ist bereits als Fixkosten-Posten erfasst; hier siehst du, wofür es draufgeht).
+  const hhList = (monthData.household||[]).slice().sort((a,b)=>a.date<b.date?1:-1);
+  const hhCategories = settings.hhCategories || HOUSEHOLD_CATEGORY_DEFAULTS;
+  const hhTotal = hhList.reduce((s,h)=>s+Number(h.amount||0),0);
+  const hhBudget = Number(settings.householdBudget||0);
+  const hhPct = hhBudget>0 ? Math.round(hhTotal/hhBudget*100) : 0;
+  const hhOver = hhBudget>0 && hhTotal>hhBudget;
+  const hhRemaining = hhBudget-hhTotal;
+  const hhByCat = {};
+  hhList.forEach(h=>{ hhByCat[h.category]=(hhByCat[h.category]||0)+Number(h.amount||0); });
+  const hhRows = hhList.map(h=>{
+    const c = catInfo(h.category, hhCategories);
+    return `
+    <tr class="row" data-kind="household" data-id="${h.id}">
+      <td style="width:98px"><input type="date" value="${h.date}" data-field="date"></td>
+      <td class="name-cell" style="display:flex;align-items:center;"><span class="dot" style="background:${c.color};flex-shrink:0;"></span><input type="text" value="${escAttr(h.label)}" data-field="label"></td>
+      <td style="width:150px">
+        <select data-field="category">
+          ${hhCategories.map(cc=>`<option value="${cc.id}" ${cc.id===h.category?'selected':''}>${cc.label}</option>`).join('')}
+        </select>
+      </td>
+      <td class="amount"><input type="number" step="0.01" inputmode="decimal" value="${h.amount}" data-field="amount"></td>
+      <td style="width:38px"><button class="del-btn" data-action="del-hh" data-id="${h.id}">✕</button></td>
+    </tr>`;}).join('');
+  const hhCatRows = Object.entries(hhByCat).sort((a,b)=>b[1]-a[1]).map(([catId,amount])=>{
+    const c = catInfo(catId, hhCategories);
+    const pct = hhTotal>0 ? Math.round(amount/hhTotal*100) : 0;
+    return `<div class="catbar-row">
+      <span class="label">${escHtml(c.label)}</span>
+      <span class="catbar-track"><span class="catbar-fill" style="width:${pct}%;background:${c.color}"></span></span>
+      <span class="val">${eur(amount)}</span>
+    </div>`;
+  }).join('');
+
+  // Hochrechnung: bei aktuellem Tempo, wo landen die Haushaltsausgaben am Monatsende?
+  const hhNow = new Date();
+  const hhIsCurrentRealMonth = currentMonthKey === `${hhNow.getFullYear()}-${String(hhNow.getMonth()+1).padStart(2,'0')}`;
+  const hhDaysInMonth = new Date(Number(currentMonthKey.split('-')[0]), Number(currentMonthKey.split('-')[1]), 0).getDate();
+  const hhDaysElapsed = hhIsCurrentRealMonth ? hhNow.getDate() : hhDaysInMonth;
+  const hhDailyRate = hhDaysElapsed>0 ? hhTotal/hhDaysElapsed : 0;
+  const hhProjected = hhDailyRate*hhDaysInMonth;
+  const hhProjOver = hhBudget>0 && hhProjected>hhBudget;
+
+  // Verlauf der letzten 6 Monate
+  const hhHist = [];
+  for(let i=5;i>=0;i--){
+    const key = shiftMonth(currentMonthKey, -i);
+    const d = (key===currentMonthKey) ? monthData : await storageGet(`month:${key}`);
+    hhHist.push({key, total: d ? (d.household||[]).reduce((s,h)=>s+Number(h.amount||0),0) : null});
+  }
+  const hhMaxAbs = Math.max(1, ...hhHist.map(h=>h.total||0));
+  const hhTrendBars = hhHist.map(h=>{
+    const h_px = h.total===null ? 2 : Math.max(3, Math.round((h.total/hhMaxAbs)*90));
+    const over = hhBudget>0 && h.total!==null && h.total>hhBudget;
+    const color = h.total===null ? 'var(--line)' : (over?'var(--neg)':'var(--pos)');
+    const [hy,hm] = h.key.split('-');
+    const short = ['J','F','M','A','M','J','J','A','S','O','N','D'][Number(hm)-1];
+    return `<div class="col">
+      <div class="bar" style="height:${h_px}px;background:${color}" title="${monthLabel(h.key)}: ${h.total===null?'–':eur(h.total)}"></div>
+      <div class="m-label">${short}</div>
+    </div>`;
+  }).join('');
+  const hhPrevEntry = hhHist[hhHist.length-2];
+  const hhPrevTotal = hhPrevEntry ? hhPrevEntry.total : null;
+
+  // Häufigste Händler (wiederkehrende Kleinausgaben, die zur Gewohnheit werden)
+  const hhMerchants = {};
+  hhList.forEach(h=>{
+    const k=(h.label||'').trim(); if(!k) return;
+    hhMerchants[k] = hhMerchants[k] || {count:0, sum:0};
+    hhMerchants[k].count++; hhMerchants[k].sum += Number(h.amount||0);
+  });
+  const hhTopMerchant = Object.entries(hhMerchants).filter(([,v])=>v.count>=3).sort((a,b)=>b[1].sum-a[1].sum)[0];
+
+  // Finanztipps fürs Haushaltskonto — aus den eigenen Zahlen abgeleitet
+  const hhTips = [];
+  if(hhIsCurrentRealMonth && hhDaysElapsed>=5 && hhBudget>0){
+    hhTips.push({ic: hhProjOver?'⚠️':'✅', tt:'Hochrechnung', tx: hhProjOver
+      ? `Bei aktuellem Tempo (${eur(hhDailyRate)}/Tag) landest du bei rund <b>${eur(hhProjected)}</b> — das wären <b>${eur(hhProjected-hhBudget)}</b> über dem Budget von ${eur(hhBudget)}. Noch ${hhDaysInMonth-hhDaysElapsed} Tage, um gegenzusteuern.`
+      : `Bei aktuellem Tempo (${eur(hhDailyRate)}/Tag) landest du bei rund <b>${eur(hhProjected)}</b> — innerhalb des Budgets von ${eur(hhBudget)}.`});
+  }
+  if(hhPrevTotal!==null && hhTotal>0){
+    const diff = hhTotal-hhPrevTotal;
+    const diffPct = hhPrevTotal>0 ? Math.round(Math.abs(diff)/hhPrevTotal*100) : null;
+    if(Math.abs(diff)>=20){
+      hhTips.push({ic: diff>0?'📈':'📉', tt:'Im Vergleich zum Vormonat', tx: diff>0
+        ? `${eur(Math.abs(diff))} mehr ausgegeben als im ${monthLabel(hhPrevEntry.key)}${diffPct?` (+${diffPct}%)`:''}.`
+        : `${eur(Math.abs(diff))} weniger ausgegeben als im ${monthLabel(hhPrevEntry.key)}${diffPct?` (−${diffPct}%)`:''}.`});
+    }
+  }
+  const hhTopCatEntry = Object.entries(hhByCat).sort((a,b)=>b[1]-a[1])[0];
+  if(hhTopCatEntry && hhTotal>0){
+    const [hhTopCatId, hhTopAmt] = hhTopCatEntry;
+    const hhTopC = catInfo(hhTopCatId, hhCategories);
+    const hhShare = Math.round(hhTopAmt/hhTotal*100);
+    if(hhShare>=35){
+      hhTips.push({ic:'🔍', tt:'Größter Posten', tx:`<b>${escHtml(hhTopC.label)}</b> macht mit ${eur(hhTopAmt)} rund <b>${hhShare}%</b> deiner Haushaltsausgaben aus.`});
+    }
+  }
+  if(hhTopMerchant){
+    const [hhMName, hhMVal] = hhTopMerchant;
+    hhTips.push({ic:'🔁', tt:'Häufiger Händler', tx:`<b>${escHtml(hhMName)}</b>: ${hhMVal.count}× in diesem Monat, zusammen ${eur(hhMVal.sum)}. Lohnt sich ein Blick, ob da Kleinvieh zur Gewohnheit wird.`});
+  }
+  const hhTipRows = hhTips.map(tp=>`<div class="tip"><span class="ic">${tp.ic}</span><span class="tx"><b class="tt">${tp.tt}</b>${tp.tx}</span></div>`).join('');
+
+  // Soll-Ist-Abgleich Haushaltskonto
+  const hhOpening = Number(monthData.hhOpening||0);
+  const hhInflow = Number(monthData.hhInflow!==undefined ? monthData.hhInflow : hhBudget);
+  const hhSollClosing = hhOpening + hhInflow - hhTotal;
+  const hhActualRaw = monthData.hhActualBalance;
+  const hhActual = (hhActualRaw===null||hhActualRaw===undefined||hhActualRaw==='') ? null : Number(hhActualRaw);
+  const hhDiff = hhActual!==null ? Math.round((hhActual-hhSollClosing)*100)/100 : null;
+
+  const catRows = Object.entries(t.byCat).sort((a,b)=>b[1]-a[1]).map(([catId,amount])=>{
+    const c = catInfo(catId, settings.categories);
+    const pct = t.expenseSmooth>0 ? Math.round(amount/t.expenseSmooth*100) : 0;
+    return `<div class="catbar-row">
+      <span class="label">${c.label}</span>
+      <span class="catbar-track"><span class="catbar-fill" style="width:${pct}%;background:${c.color}"></span></span>
+      <span class="val">${eur(amount)}</span>
+    </div>`;
+  }).join('');
+
+  // Budgets: variable Ausgaben dieses Monats je Kategorie vs. Limit
+  const varByCat = {};
+  (monthData.transactions||[]).forEach(tx=>{ varByCat[tx.category]=(varByCat[tx.category]||0)+Number(tx.amount||0); });
+  const budgetCats = (settings.categories||[]).filter(c=>Number(c.budget||0)>0);
+  let anyOverBudget=false, anyNearBudget=false;
+  const budgetRows = budgetCats.map(c=>{
+    const spent = varByCat[c.id]||0, budget=Number(c.budget);
+    const pct = Math.min(100, Math.round(spent/budget*100));
+    const rawPct = spent/budget*100;
+    const over = spent>budget;
+    if(over) anyOverBudget=true; else if(rawPct>=80) anyNearBudget=true;
+    const fillColor = over ? 'var(--neg)' : (rawPct>=80 ? 'var(--gold)' : 'var(--pos)');
+    const rest = budget-spent;
+    return `<div class="catbar-row" style="flex-wrap:wrap;">
+      <span class="label">${escHtml(c.label)}</span>
+      <span class="catbar-track"><span class="catbar-fill" style="width:${pct}%;background:${fillColor}"></span></span>
+      <span class="val">${eur(spent)}<span style="color:var(--muted)"> / ${eur(budget)}</span></span>
+      <span style="width:100%;text-align:right;font-size:11px;color:${over?'var(--neg)':'var(--muted)'};font-family:'IBM Plex Mono',monospace;">${over?`${eur(-rest)} über Limit`:`noch ${eur(rest)}`}</span>
+    </div>`;
+  }).join('');
+
+  const maxAbs = Math.max(1, ...history.map(h=>Math.abs(h.balance||0)));
+  const trendBars = history.map(h=>{
+    const h_px = h.balance===null ? 2 : Math.max(3, Math.round(Math.abs(h.balance)/maxAbs*90));
+    const color = h.balance===null ? 'var(--line)' : (h.balance>=0?'var(--pos)':'var(--neg)');
+    const [y,m] = h.key.split('-');
+    const short = ['J','F','M','A','M','J','J','A','S','O','N','D'][Number(m)-1];
+    return `<div class="col">
+      <div class="bar" style="height:${h_px}px;background:${color}" title="${monthLabel(h.key)}: ${h.balance===null?'–':eur(h.balance)}"></div>
+      <div class="m-label">${short}</div>
+    </div>`;
+  }).join('');
+
+  const challenge = await yearChallengeStats();
+  const year = currentMonthKey.split('-')[0];
+
+  // Kommende Fälligkeiten: echte Fixkosten-Abgänge der nächsten 12 Monate
+  const upcoming = [];
+  for(let i=0;i<12;i++){
+    const key = shiftMonth(currentMonthKey, i);
+    const dueTotal = (settings.fixedCosts||[]).reduce((s,f)=>s+fcDueThisMonth(f,key),0);
+    upcoming.push({key, dueTotal});
+  }
+  const upMax = Math.max(...upcoming.map(u=>u.dueTotal));
+  const upMin = Math.min(...upcoming.map(u=>u.dueTotal));
+  const upAvg = upcoming.reduce((s,u)=>s+u.dueTotal,0)/12;
+  const upMaxItem = upcoming.reduce((a,b)=>b.dueTotal>a.dueTotal?b:a, upcoming[0]);
+  const upcomingBars = upcoming.map((u,idx)=>{
+    const spike = u.dueTotal > upAvg*1.02;
+    const h_px = 22 + ((u.dueTotal-upMin)/((upMax-upMin)||1))*82;
+    const color = spike ? 'var(--gold)' : 'var(--pos)';
+    const [yy,mm] = u.key.split('-');
+    const short = ['J','F','M','A','M','J','J','A','S','O','N','D'][Number(mm)-1];
+    return `<div class="col">
+      ${spike?`<div class="up-val">${Math.round(u.dueTotal)}</div>`:''}
+      <div class="bar" style="height:${h_px}px;background:${color}" title="${monthLabel(u.key)}: ${eur(u.dueTotal)}"></div>
+      <div class="m-label">${short}</div>
+    </div>`;
+  }).join('');
+
+  // Kleinunternehmen
+  const biz = await yearBusinessStats();
+  const bizRate = Number(settings.bizTaxRate)||0;
+  const bizSaveRateVal = Number(settings.bizSaveRate)||0;
+  const bizMonthEin = (monthData.business||[]).filter(b=>(b.type||'ein')!=='aus').reduce((s,b)=>s+Number(b.amount||0),0);
+  const bizMonthAus = (monthData.business||[]).filter(b=>b.type==='aus').reduce((s,b)=>s+Number(b.amount||0),0);
+  const bizMonthTotal = bizMonthEin - bizMonthAus;
+  const bizTax = Math.max(0, biz.total) * bizRate/100;
+  const bizSave = Math.max(0, biz.total) * bizSaveRateVal/100;
+  const bizFree = biz.total - bizTax - bizSave;
+  const bizRows = (monthData.business||[]).slice().sort((a,b)=>a.date<b.date?1:-1).map(b=>{
+    const type = b.type||'ein';
+    return `
+    <tr class="row" data-kind="biz" data-id="${b.id}">
+      <td style="width:98px"><input type="date" value="${b.date}" data-field="date"></td>
+      <td class="name-cell"><input type="text" value="${escAttr(b.label)}" data-field="label"></td>
+      <td style="width:74px">
+        <select data-field="type">
+          <option value="ein" ${type==='ein'?'selected':''}>Einn.</option>
+          <option value="aus" ${type==='aus'?'selected':''}>Ausg.</option>
+        </select>
+      </td>
+      <td class="amount" style="color:${type==='aus'?'var(--neg)':'var(--pos)'}"><input type="number" step="0.01" inputmode="decimal" value="${b.amount}" data-field="amount"></td>
+      <td style="width:38px"><button class="del-btn" data-action="del-biz" data-id="${b.id}">✕</button></td>
+    </tr>`;}).join('');
+
+  // Überschuss verteilen
+  const inv = settings.invest;
+
+  // Paar-Aufteilung (fair nach Nettoeinkommen)
+  const hh = settings.household || {partnerName:'Sophie', incomeB:0};
+  const pName = hh.partnerName || 'Partner';
+  // Dein Einkommen aus den Einnahmen ableiten (person='ich'); Partner-Netto separat gepflegt
+  const incA = (monthData.income||[]).filter(i=>(i.person||'ich')==='ich').reduce((s,i)=>s+Number(i.amount||0),0);
+  const partnerTransfer = (monthData.income||[]).filter(i=>i.person==='sophie').reduce((s,i)=>s+Number(i.amount||0),0);
+  const incB = Number(hh.incomeB||0);
+  const incTotal = incA + incB;
+  const hasB = incB > 0;
+  const shareApct = incTotal>0 ? incA/incTotal : 0.5;
+  const shareBpct = incTotal>0 ? incB/incTotal : 0.5;
+  const fcList = settings.fixedCosts||[];
+  const sharedFixed = fcList.filter(f=>(f.scope||'gemeinsam')==='gemeinsam').reduce((s,f)=>s+fcMonthly(f),0);
+  const privA = fcList.filter(f=>f.scope==='privat' && (f.who||'ich')==='ich').reduce((s,f)=>s+fcMonthly(f),0);
+  const privB = fcList.filter(f=>f.scope==='privat' && f.who==='sophie').reduce((s,f)=>s+fcMonthly(f),0);
+  // Gemeinsame Einnahmen (Kindergeld & Co.) decken zuerst die gemeinsamen Kosten
+  const sharedNet = Math.max(0, sharedFixed - sharedIncome);
+  const fairA = sharedNet*shareApct, fairB = sharedNet*shareBpct;
+  // Deine variablen Bewegungen zählen als deine Ausgaben
+  const restA = incA - fairA - privA - t.variableTotal, restB = incB - fairB - privB;
+  // Faire Sparquoten (das, was "wirklich passt")
+  const fairRateA = incA>0 ? Math.round(restA/incA*100) : 0;
+  const hhIncome = incA + incB + sharedIncome;
+  const hhCosts = sharedFixed + privA + privB + t.variableTotal;
+  // Fixkostenquote: sobald Sophies Netto hinterlegt ist, gegen das ECHTE Haushaltseinkommen rechnen
+  // (beide Gehälter zusammen) statt nur gegen das, was über dein Kassenbuch läuft.
+  const fixQuote = hasB
+    ? (hhIncome>0 ? Math.round(t.fixedSmooth/hhIncome*100) : 0)
+    : (t.incomeTotal>0 ? Math.round(t.fixedSmooth/t.incomeTotal*100) : 0);
+  const hhRate = hhIncome>0 ? Math.round((hhIncome-hhCosts)/hhIncome*100) : 0;
+  // Notgroschen-Reichweite (Runway)
+
+  // Vermögen: Konten nach Typ
+  const ACCOUNT_TYPES = ACCOUNT_TYPES_JS;
+  const accounts = settings.accounts || [];
+  const accSum = type => accounts.filter(a=>a.type===type).reduce((s,a)=>s+Number(a.amount||0),0);
+  const sparSum = accSum('spar');
+  const depotSum = accSum('depot');
+  const gewerbeSum = accSum('gewerbe');
+  const totalWealth = sparSum + depotSum + gewerbeSum;
+  // Notgroschen-Reichweite: wie viele Monate deckt das Sparkonto die geglätteten Fixkosten?
+  const runwayMonths = t.fixedSmooth>0 ? sparSum/t.fixedSmooth : 0;
+  const accountRows = ACCOUNT_TYPES.map(ty=>{
+    const items = accounts.filter(a=>a.type===ty.id);
+    if(!items.length) return '';
+    return `
+    <tr class="group-row">
+      <td colspan="1"><span class="dot" style="background:${ty.color}"></span>${ty.label}</td>
+      <td class="amount">${eur(accSum(ty.id))}</td><td></td>
+    </tr>
+    ${items.map(a=>`
+    <tr class="row" data-kind="account" data-id="${a.id}">
+      <td class="name-cell"><input type="text" value="${escAttr(a.label)}" data-field="label"></td>
+      <td class="amount"><input type="number" step="0.01" inputmode="decimal" value="${a.amount}" data-field="amount"></td>
+      <td style="width:30px"><button class="del-btn" data-action="open-acctx" data-acc="${a.id}" title="Bewegungen erfassen">↕</button></td>
+      <td style="width:38px"><button class="del-btn" data-action="del-account" data-id="${a.id}">✕</button></td>
+    </tr>`).join('')}`;
+  }).join('');
+
+  const surplus = Math.max(0, t.balanceSmooth);
+  const notgroschenFull = sparSum >= Number(inv.ziel);
+  const progPct = Math.min(100, Math.round((sparSum/Math.max(1,Number(inv.ziel)))*100));
+  const splitSum = Number(inv.splitNotgroschen)+Number(inv.splitEtf)+Number(inv.splitFrei);
+  const splitAmt = p => surplus * Number(p)/100;
+
+  // Sparziele
+  const MONTH_NAMES_SHORT = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  const goalRows = (settings.goals||[]).map(go=>{
+    const target=Number(go.target||0), current=Number(go.current||0), monthly=Number(go.monthly||0);
+    const pct = target>0 ? Math.min(100, Math.round(current/target*100)) : 0;
+    const done = current>=target && target>0;
+    const remaining = Math.max(0, target-current);
+    const monthsLeft = done ? 0 : (monthly>0 ? Math.ceil(remaining/monthly) : null);
+    let eta='';
+    if(done){ eta='<b class="due-now">erreicht ✓</b>'; }
+    else if(monthsLeft===null){ eta='noch keine Sparrate gesetzt'; }
+    else {
+      const d=new Date(); d.setMonth(d.getMonth()+monthsLeft);
+      eta=`noch ${eur(remaining)} · ${monthsLeft} Mon. (${MONTH_NAMES_SHORT[d.getMonth()]} ${d.getFullYear()})`;
+    }
+    return `
+    <div class="goal" data-kind="goal" data-id="${go.id}">
+      <div class="goal-head">
+        <input type="text" class="goal-name" value="${escAttr(go.label)}" data-field="label">
+        <span class="goal-pct">${pct}&nbsp;%</span>
+        <button class="del-btn" data-action="del-goal" data-id="${go.id}">✕</button>
+      </div>
+      <div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${done?'var(--pos)':'var(--gold)'}"></div></div>
+      <div class="goal-meta">
+        <input type="number" step="50" class="inline-num" value="${current}" data-field="current"> /
+        <input type="number" step="50" class="inline-num" value="${target}" data-field="target"> € ·
+        <input type="number" step="10" class="inline-num" style="width:58px" value="${monthly}" data-field="monthly"> €/Mon · ${eta}
+      </div>
+    </div>`;
+  }).join('');
+  const goalsMonthlySum = (settings.goals||[]).filter(g=>Number(g.current||0)<Number(g.target||0)).reduce((s,g)=>s+Number(g.monthly||0),0);
+
+  // Jahresübersicht
+  const ys = await yearSummary();
+  const ysRate = ys.inc>0 ? Math.round(ys.save/ys.inc*100) : 0;
+
+  // Finanz-Check (Ampel)
+  const GREEN='var(--pos)', YELLOW='var(--gold)', RED='var(--neg)';
+  const checks = [
+    (()=>{ const v=fairRateA; return {label:'Sparquote (fair)', color: v>=15?GREEN:(v>=8?YELLOW:RED),
+      txt: v>=15?`${v}% — stark`:(v>=8?`${v}% — okay, Luft nach oben`:`${v}% — zu niedrig`) }; })(),
+    (()=>{ const v=runwayMonths; return {label:'Notgroschen', color: v>=4?GREEN:(v>=2?YELLOW:RED),
+      txt: v>=4?`${v.toFixed(1)} Monate — gut abgesichert`:(v>=2?`${v.toFixed(1)} Monate — weiter auffüllen`:`${v.toFixed(1)} Monate — knapp`) }; })(),
+    (()=>{ const v=t.balanceSmooth; return {label:'Monatsbilanz', color: v>0?GREEN:RED,
+      txt: v>0?`+${eur(v)} planbar übrig`:`${eur(v)} — Ausgaben ≥ Einnahmen` }; })(),
+    (()=>{ const v=fixQuote; const basis = hasB?' (Haushalt)':' (nur du)'; return {label:'Fixkostenquote'+basis, color: v<=50?GREEN:(v<=65?YELLOW:RED),
+      txt: v<=50?`${v}% — guter Puffer`:(v<=65?`${v}% — wenig Spielraum`:`${v}% — sehr hoch`) }; })(),
+  ];
+  if(budgetCats.length){
+    checks.push({label:'Budgets', color: anyOverBudget?RED:(anyNearBudget?YELLOW:GREEN),
+      txt: anyOverBudget?'ein Limit überschritten':(anyNearBudget?'ein Limit fast erreicht':'alle im Rahmen')});
+  }
+  // ---------- Donut: Ausgabenverteilung ----------
+  const donutData = Object.entries(t.byCat)
+    .map(([id,amt])=>({c:catInfo(id, settings.categories), amt}))
+    .filter(d=>d.amt>0).sort((a,b)=>b.amt-a.amt);
+  const donutTotal = donutData.reduce((s,d)=>s+d.amt,0);
+  const DR=54, DCIRC=2*Math.PI*DR;
+  let dAcc=0;
+  const donutSegs = donutData.map(d=>{
+    const len = donutTotal>0 ? (d.amt/donutTotal)*DCIRC : 0;
+    const seg = `<circle cx="72" cy="72" r="${DR}" fill="none" stroke="${d.c.color}" stroke-width="20"
+      stroke-dasharray="${len.toFixed(2)} ${(DCIRC-len).toFixed(2)}" stroke-dashoffset="${(-dAcc).toFixed(2)}"
+      transform="rotate(-90 72 72)"><title>${escHtml(d.c.label)}: ${eur(d.amt)}</title></circle>`;
+    dAcc += len; return seg;
+  }).join('');
+  const donutLegend = donutData.map(d=>`
+    <div class="lg-row">
+      <span class="dot" style="background:${d.c.color};margin-right:0"></span>
+      <span class="lg-name">${escHtml(d.c.label)}</span>
+      <span class="lg-val">${donutTotal>0?Math.round(d.amt/donutTotal*100):0}&nbsp;% · ${eur(d.amt)}</span>
+    </div>`).join('');
+
+  // ---------- Vermögens-Projektion (Zinseszins) ----------
+  const pj = settings.projection || {monthly:300, years:20, rate:6};
+  const pjYears = Math.max(1, Math.min(45, Number(pj.years)||20));
+  const pjRate  = Math.max(0, Math.min(15, Number(pj.rate)||0));
+  const pjMonthly = Math.max(0, Number(pj.monthly)||0);
+  const pjStart = depotSum;
+  const pjPts = [];
+  {
+    const r = pjRate/100/12;
+    let v = pjStart, paid = pjStart;
+    pjPts.push({v, paid});
+    for(let i=1;i<=pjYears*12;i++){ v = v*(1+r) + pjMonthly; paid += pjMonthly; if(i%12===0) pjPts.push({v, paid}); }
+  }
+  const pjEnd = pjPts[pjPts.length-1];
+  const pjGain = pjEnd.v - pjEnd.paid;
+  const pjMax = Math.max(pjEnd.v, 1);
+  const PW=330, PH=155, PLx=4, PB=20;
+  const pxAt = i => PLx + (i/(pjPts.length-1))*(PW-2*PLx);
+  const pyAt = v => (PH-PB) - (v/pjMax)*(PH-PB-10);
+  const pjLine = key => pjPts.map((p,i)=>`${i?'L':'M'}${pxAt(i).toFixed(1)},${pyAt(p[key]).toFixed(1)}`).join(' ');
+  const pjArea = key => `${pjLine(key)} L${pxAt(pjPts.length-1).toFixed(1)},${PH-PB} L${pxAt(0).toFixed(1)},${PH-PB} Z`;
+  const pjTicks = pjPts.map((p,i)=>i).filter(i=> i>0 && (i % (pjYears>=20?5:(pjYears>=10?2:1))===0))
+    .map(i=>`<text x="${pxAt(i).toFixed(1)}" y="${PH-6}" fill="#8B94A3" font-size="9" text-anchor="middle" font-family="IBM Plex Mono, monospace">${i}J</text>`).join('');
+
+  // ---------- Spar- & Anlagetipps (aus deinen Zahlen) ----------
+  const freizeitAbos = (settings.fixedCosts||[]).filter(f=>f.category==='freizeit');
+  const aboMonthly = freizeitAbos.reduce((s,f)=>s+fcMonthly(f),0);
+  const biggestFix = (settings.fixedCosts||[]).slice().sort((a,b)=>fcMonthly(b)-fcMonthly(a))[0];
+  const tips = [];
+  if(runwayMonths < 3){
+    tips.push({ic:'🛟', tt:'Notgroschen zuerst', tx:`Dein Sparkonto deckt <b>${runwayMonths.toFixed(1)} Monate</b> Fixkosten. Mit einem zweiten Kind gelten 3–6 Monate als üblicher Richtwert. Bis dahin ist Tagesgeld sinnvoller als jede Rendite — Geld, das jederzeit verfügbar sein muss, gehört nicht an die Börse.`});
+  } else if(!notgroschenFull){
+    tips.push({ic:'🛟', tt:'Notgroschen fast da', tx:`${runwayMonths.toFixed(1)} Monate gedeckt, noch <b>${eur(Math.max(0,Number(inv.ziel)-sparSum))}</b> bis zu deinem Ziel. Ab dann kann der Notgroschen-Anteil in den Sparplan wandern.`});
+  } else {
+    tips.push({ic:'✅', tt:'Notgroschen steht', tx:`${runwayMonths.toFixed(1)} Monate gedeckt. Alles, was jetzt zusätzlich auf dem Tagesgeld liegt, verliert real gegen die Inflation — der Überschuss kann in den langfristigen Topf.`});
+  }
+  if(aboMonthly>0){
+    tips.push({ic:'🔁', tt:'Abo-Check', tx:`Deine Freizeit-Abos kosten <b>${eur(aboMonthly)}/Monat</b> — das sind <b>${eur(aboMonthly*12)} im Jahr</b>. Einmal im Jahr durchgehen: was hast du in den letzten 4 Wochen wirklich genutzt? Gekündigte Abos wirken jeden Monat, ohne dass du etwas tun musst.`});
+  }
+  if(fixQuote>0){
+    tips.push({ic:'⚖️', tt:'Fixkostenquote', tx:`<b>${fixQuote}&nbsp;%</b> ${hasB?`eures gemeinsamen Nettoeinkommens (${eur(hhIncome)})`:'deiner Einnahmen'} sind fest gebunden${biggestFix?`, größter Einzelposten ist ${escHtml(biggestFix.label)} mit ${eur(fcMonthly(biggestFix))}/Monat`:''}. Unter 50&nbsp;% bleibt Luft für schlechte Monate — als Trader mit schwankendem Einkommen zählt das doppelt.${!hasB?` Trag ${escHtml(pName)}s Netto unten bei „Paar-Aufteilung" ein, dann rechne ich die Quote gegen das echte Haushaltseinkommen statt nur gegen deins.`:''}`});
+  }
+  if(upMaxItem && upMaxItem.dueTotal - upAvg > 100){
+    tips.push({ic:'📅', tt:'Teure Monate vorfinanzieren', tx:`Im ${monthLabel(upMaxItem.key)} werden <b>${eur(upMaxItem.dueTotal)}</b> fällig — ${eur(upMaxItem.dueTotal-upAvg)} über dem Schnitt. Statt jedes Jahr überrascht zu werden: den Jahresbetrag durch 12 teilen und monatlich auf ein separates Rechnungs-Konto legen.`});
+  }
+  if(sharedIncome>0){
+    tips.push({ic:'👶', tt:'Kindergeld arbeiten lassen', tx:`Ihr bekommt <b>${eur(sharedIncome)}/Monat</b>. Wenn ein Teil davon nicht für laufende Kosten gebraucht wird, ist ein separates Depot auf den Namen des Kindes eine verbreitete Variante — Vorteil: eigener Sparerpauschbetrag und Grundfreibetrag. Nachteil: Das Geld gehört dann rechtlich dem Kind und ist mit 18 nicht mehr eure Entscheidung.`});
+  }
+  tips.push({ic:'🧾', tt:'Sparerpauschbetrag nutzen', tx:`Kapitalerträge sind pro Person bis <b>1.000&nbsp;€ im Jahr</b> steuerfrei (Ehepaare zusammen 2.000&nbsp;€) — aber nur, wenn bei der Bank ein Freistellungsauftrag hinterlegt ist. Ohne ihn führt die Bank Abgeltungsteuer ab, die du dir erst über die Steuererklärung zurückholen musst.`});
+  if(pjMonthly>0){
+    tips.push({ic:'📈', tt:'Zeit schlägt Betrag', tx:`Bei ${eur(pjMonthly)}/Monat und ${pjRate}&nbsp;% Annahme kommen in ${pjYears} Jahren rechnerisch <b>${eur(pjEnd.v)}</b> zusammen — davon <b>${eur(pjGain)}</b> aus der Wertentwicklung. Die Rendite ist eine Annahme, keine Zusage; Kurse schwanken und können auch fallen.`});
+  }
+  if(anyOverBudget){
+    tips.push({ic:'🚨', tt:'Budget gerissen', tx:`Mindestens ein Monatslimit ist überschritten. Bei dir hängt das erfahrungsgemäß eher am Kopf als am Konto — dieselbe Regeltreue, die du im Trading trackst, gilt hier auch.`});
+  }
+
+  const tipRows = tips.map(tp=>`
+    <div class="tip"><span class="ic">${tp.ic}</span><span class="tx"><b class="tt">${tp.tt}</b>${tp.tx}</span></div>`).join('');
+
+  const checkRows = checks.map(c=>`
+    <div class="check-row">
+      <span class="check-dot" style="background:${c.color}"></span>
+      <span class="check-label">${c.label}</span>
+      <span class="check-txt">${c.txt}</span>
+    </div>`).join('');
+
+  app.innerHTML = `
+    <div class="topbar">
+      <div>
+        <h1>Kassenbuch</h1>
+        <div class="sub">Privater Monatsabschluss</div>
+      </div>
+      <div class="backup-btns">
+        <button class="add-btn" data-action="export-backup">↓ Sichern</button>
+        <button class="add-btn" data-action="import-backup">↑ Laden</button>
+        <input type="file" id="import-file" accept="application/json" style="display:none">
+      </div>
+    </div>
+
+
+    <div class="statement fade-in" data-tab="monat">
+      <div class="statement-head">
+        <div class="eyebrow">Kassensturz</div>
+        <div class="month-nav">
+          <button data-action="prev-month">‹</button>
+          <div class="month-label">${monthLabel(currentMonthKey)}</div>
+          <button data-action="next-month">›</button>
+        </div>
+      </div>
+      <div class="statement-hero">
+        <div class="hero-num ${balClass}">${eur(t.balanceActual)}</div>
+        <div class="hero-label">${balWord} · Ist-Stand</div>
+      </div>
+      <div class="statement-sub">
+        <div class="sub-item"><span class="sub-label">Einnahmen</span><span class="sub-val">${eur(t.incomeTotal)}</span></div>
+        <div class="sub-div"></div>
+        <div class="sub-item"><span class="sub-label">Ausgaben</span><span class="sub-val">${eur(t.expenseActual)}</span></div>
+      </div>
+    </div>
+
+    <div class="kpi-strip" data-tab="monat">
+      <div class="kpi"><span class="eyebrow">Sparquote Ich</span><b class="${fairRateA>=15?'pos':(fairRateA>=0?'':'neg')}">${fairRateA}&nbsp;%</b><span class="kpi-note">fair, nach Anteil</span></div>
+      <div class="kpi"><span class="eyebrow">Sparquote Haushalt</span><b class="${hhRate>=15?'pos':(hhRate>=0?'':'neg')}">${hasB?hhRate+'&nbsp;%':'—'}</b><span class="kpi-note">${hasB?'Ziel 15–25 %':pName+'-Netto fehlt'}</span></div>
+      <div class="kpi"><span class="eyebrow">Notgroschen</span><b class="${runwayMonths>=3?'pos':'neg'}">${runwayMonths.toFixed(1)}</b><span class="kpi-note">Monate gedeckt</span></div>
+    </div>
+    <div class="hint" data-tab="monat" style="text-align:center;margin-top:8px;">
+      Oben der reine Kassensturz über dein Konto${partnerTransfer>0?` (inkl. ${eur(partnerTransfer)} von ${escHtml(pName)})`:''}${sharedIncome>0?` und ${eur(sharedIncome)} gemeinsame Einnahmen`:''}. Die faire Sparquote rechnet dagegen nur mit deinem eigenen Einkommen und deinem gerechten Kostenanteil.
+    </div>
+
+    <div class="card" data-tab="monat">
+      <div class="card-head"><h2>Finanz-Check</h2></div>
+      <div class="check-list">${checkRows}</div>
+    </div>
+
+    <div class="card" data-tab="monat">
+      <div class="card-head"><h2>Einnahmen</h2>
+        <button class="add-btn" data-action="add-income">+ Einnahme</button>
+      </div>
+      <div class="hint">Persönliche Einnahmen — Gehalt, Übertrag von ${escHtml(pName)}, Nebeneinkünfte.</div>
+      <table><tbody>${incomeRows}
+        ${ownIncomeList.length>1?`<tr class="sum-row"><td>Summe</td><td class="amount">${eur(ownIncomeSum)}</td><td></td></tr>`:''}
+      </tbody></table>
+    </div>
+
+    <div class="card" data-tab="monat">
+      <div class="card-head"><h2>Gemeinsame Einnahmen</h2>
+        <button class="add-btn" data-action="add-kindergeld">+ Kindergeld</button>
+      </div>
+      <div class="hint">Geld, das euch beiden gehört: Kindergeld, Elterngeld, Rückerstattungen. Es zählt voll in den Kassensturz, wird aber keinem von euch persönlich zugerechnet — im Tab „Paar" deckt es zuerst die gemeinsamen Kosten ab.</div>
+      <table><tbody>${sharedIncomeRows}
+        ${sharedIncomeList.length?`<tr class="sum-row"><td>Summe gemeinsam</td><td class="amount">${eur(sharedIncome)}</td><td></td></tr>`:''}
+      </tbody></table>
+      ${!sharedIncomeList.length?`<div class="hint" style="margin-top:8px;">Noch nichts erfasst. „+ Kindergeld" legt einen Posten mit ${eur(KINDERGELD_2026)} an — dem Satz pro Kind seit Januar 2026.</div>`:
+        `<div class="split-hint">Kindergeld 2026: <b>${eur(KINDERGELD_2026)}</b> pro Kind und Monat. Bei zwei Kindern also ${eur(KINDERGELD_2026*2)} — den Betrag kannst du direkt anpassen.</div>`}
+    </div>
+
+    <div class="card" data-tab="monat">
+      <div class="card-head"><h2>Fixkosten</h2>
+        <div style="display:flex;gap:6px;">
+          <button class="add-btn" data-action="toggle-all-groups">${anyOpen?'Alle einklappen':'Alle ausklappen'}</button>
+          <button class="add-btn" data-action="add-fixed">+ Posten</button>
+        </div>
+      </div>
+      <div class="hint">Kategorie antippen zum Auf-/Zuklappen. Quartals-/Jahresposten mit vollem Betrag eintragen und Intervall wählen — sie erscheinen nur im Fälligkeitsmonat als echter Abgang.</div>
+      <div class="fg-list">${fixedRows}</div>
+      <div class="split-row" style="margin-top:4px;"><div class="left"><b>Ø pro Monat (geglättet)</b></div><div class="euro">${eur(t.fixedSmooth)}</div></div>
+      <div class="split-row"><div class="left" style="color:var(--muted)">davon in ${monthLabel(currentMonthKey)} tatsächlich fällig</div><div class="euro" style="color:var(--muted)">${eur(t.fixedDue)}</div></div>
+    </div>
+
+    <div class="card" data-tab="sparen">
+      <div class="card-head"><h2>Kommende Fälligkeiten</h2></div>
+      <div class="hint">Tatsächliche Fixkosten-Abgänge der nächsten 12 Monate. Goldene Balken = teurere Monate durch Quartals-/Jahresrechnungen.</div>
+      <div class="trend" style="height:130px;">${upcomingBars}</div>
+      <div class="split-hint">Teuerster Monat: <b>${eur(upMaxItem.dueTotal)}</b> im ${monthLabel(upMaxItem.key)} — das sind <b>${eur(upMaxItem.dueTotal-upMin)}</b> mehr als im günstigsten. Halte für solche Monate genug auf dem Konto.</div>
+    </div>
+
+    <div class="card" data-tab="monat">
+      <div class="card-head"><h2>Bewegungen</h2></div>
+      <div class="hint">Einmalige & spontane Ausgaben — Challenges, Onlinekäufe, alles außerhalb der Fixkosten.</div>
+      <table><tbody>${txRows}
+        ${monthData.transactions.length? `<tr class="sum-row"><td colspan="3">Summe Bewegungen</td><td class="amount">${eur(t.variableTotal)}</td><td></td></tr>`:''}
+      </tbody></table>
+      <button class="add-btn" style="width:100%;margin-top:10px;" data-action="open-add-tx">+ Bewegung erfassen</button>
+      ${challenge.count>0 ? `
+      <div class="callout">
+        <div class="t">Challenges <b>${year}</b>: ${challenge.count} Käufe</div>
+        <div class="figs">${eur(challenge.total)}</div>
+      </div>`:''}
+    </div>
+
+    <div class="card fade-in" data-tab="haushalt">
+      <div class="card-head"><h2>Haushaltskonto</h2></div>
+      <div class="hint">Konsumausgaben vom gemeinsamen Haushaltskonto — Lebensmittel, Drogerie & Co. Läuft getrennt vom Kassensturz oben; die monatliche Überweisung dorthin steht schon als Fixkosten-Posten „Haushaltskonto".</div>
+      <div class="kpi-strip" style="display:grid;">
+        <div class="kpi"><span class="eyebrow">Ausgegeben</span><b class="${hhOver?'neg':''}">${eur(hhTotal)}</b><span class="kpi-note">${monthLabel(currentMonthKey)}</span></div>
+        <div class="kpi"><span class="eyebrow">Budget</span><b>${eur(hhBudget)}</b><span class="kpi-note">monatlich</span></div>
+        <div class="kpi"><span class="eyebrow">${hhOver?'Über Limit':'Übrig'}</span><b class="${hhOver?'neg':'pos'}">${eur(Math.abs(hhRemaining))}</b><span class="kpi-note">${hhPct}% genutzt</span></div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-track"><div class="prog-fill" style="width:${Math.min(100,Math.max(0,hhPct))}%;background:${hhOver?'var(--neg)':'var(--pos)'}"></div></div>
+      </div>
+      ${hhIsCurrentRealMonth && hhDaysElapsed>=5 && hhBudget>0 ? `
+      <div class="callout" style="${hhProjOver?'border-color:var(--neg)':''}">
+        <div class="t">Hochrechnung Monatsende <b style="${hhProjOver?'color:var(--neg)':'color:var(--pos)'}">${hhProjOver?'über Budget':'im Rahmen'}</b></div>
+        <div class="figs" style="${hhProjOver?'color:var(--neg)':''}">≈ ${eur(hhProjected)}</div>
+      </div>`:''}
+    </div>
+
+    ${hhList.length ? `
+    <div class="card fade-in" data-tab="haushalt">
+      <div class="card-head"><h2>Kategorien</h2></div>
+      <div class="hint">Verteilung der Haushaltskonto-Ausgaben in ${monthLabel(currentMonthKey)}.</div>
+      ${hhCatRows}
+    </div>`:''}
+
+    <div class="card fade-in" data-tab="haushalt">
+      <div class="card-head"><h2>Verlauf</h2></div>
+      <div class="hint">Haushaltskonto-Ausgaben der letzten 6 Monate${hhBudget>0?' — rot = über Budget':''}.</div>
+      <div class="trend">${hhTrendBars}</div>
+    </div>
+
+    <div class="card fade-in" data-tab="haushalt">
+      <div class="card-head"><h2>Kontostand-Abgleich</h2></div>
+      <div class="hint">Anfangsbestand wird automatisch aus dem Vormonat übernommen. Trag den echten Kontostand aus der Banking-App ein, um Buchungslücken zu finden.</div>
+      <div class="split-row"><div class="left">Anfangsbestand</div><div class="euro"><input type="number" step="1" class="inline-num" style="width:90px" value="${hhOpening}" data-hhfield="opening"> €</div></div>
+      <div class="split-row"><div class="left">+ Einzahlung diesen Monat</div><div class="euro"><input type="number" step="10" class="inline-num" style="width:90px" value="${hhInflow}" data-hhfield="inflow"> €</div></div>
+      <div class="split-row"><div class="left">− Ausgaben erfasst</div><div class="euro">− ${eur(hhTotal)}</div></div>
+      <div class="split-row" style="border-top:1px solid var(--line);margin-top:2px;padding-top:8px;"><div class="left"><b>Soll-Kontostand</b></div><div class="euro"><b>${eur(hhSollClosing)}</b></div></div>
+      <div class="split-row"><div class="left">Kontostand lt. Bank <span class="note" style="display:inline">(optional)</span></div><div class="euro"><input type="number" step="1" class="inline-num" style="width:90px" value="${hhActual===null?'':hhActual}" placeholder="—" data-hhfield="actual"> €</div></div>
+      ${hhDiff!==null ? `
+      <div class="split-hint" style="${Math.abs(hhDiff)>=1?'':''}">
+        ${Math.abs(hhDiff)<1
+          ? `Stimmt überein. <b style="color:var(--pos)">${eur(hhDiff)}</b> Abweichung — im Rahmen von Rundung.`
+          : hhDiff<0
+            ? `Abweichung: <b style="color:var(--neg)">${eur(hhDiff)}</b> — auf dem Konto ist weniger als erwartet. Möglicherweise fehlt eine Buchung in der Liste oben, oder eine Kartenzahlung ist noch nicht final abgebucht.`
+            : `Abweichung: <b style="color:var(--gold)">+${eur(hhDiff)}</b> — auf dem Konto ist mehr als erwartet. Prüfen, ob eine Einzahlung nicht als „Einzahlung diesen Monat" erfasst ist.`}
+      </div>`:''}
+    </div>
+
+    ${hhTipRows ? `
+    <div class="card fade-in" data-tab="haushalt">
+      <div class="card-head"><h2>Finanztipps</h2></div>
+      <div class="hint">Aus deinen Haushaltskonto-Zahlen abgeleitet.</div>
+      ${hhTipRows}
+    </div>`:''}
+
+    <div class="card fade-in" data-tab="haushalt">
+      <div class="card-head"><h2>Ausgaben</h2>
+        <button class="add-btn" data-action="open-add-hh">+ Ausgabe</button>
+      </div>
+      <table><tbody>${hhRows}
+        ${hhList.length? `<tr class="sum-row"><td colspan="3">Summe</td><td class="amount">${eur(hhTotal)}</td><td></td></tr>`:''}
+      </tbody></table>
+      ${!hhList.length?`<div class="hint" style="margin-top:6px;">Noch nichts erfasst — manuell hinzufügen oder den ING-Kontoauszug importieren.</div>`:''}
+      <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px;">
+        <div class="hint" style="margin-bottom:8px;">CSV-Export aus dem ING-Onlinebanking importieren (nur Ausgaben, keine Eingänge — Duplikate werden automatisch erkannt).</div>
+        <button class="add-btn" style="width:100%;" data-action="import-hh-csv">↑ ING-CSV importieren</button>
+        <input type="file" id="import-hh-csv" accept=".csv,text/csv" style="display:none">
+      </div>
+      <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px;">
+        <div class="hint" style="margin-bottom:8px;">Oder einfach einen Screenshot deiner Umsätze aus der Banking-App schicken — die Buchungen werden automatisch erkannt und vor dem Übernehmen zur Prüfung angezeigt.</div>
+        <button class="add-btn" style="width:100%;" data-action="import-hh-shot">📷 Screenshot importieren</button>
+        <input type="file" id="import-hh-shot" accept="image/*" style="display:none">
+      </div>
+    </div>
+
+    <details class="settings" data-tab="haushalt">
+      <summary>Haushaltskonto-Einstellungen</summary>
+      <div class="card">
+        <div class="field" style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-family:'IBM Plex Mono',monospace;">Monatliches Budget (€)</label>
+          <input type="number" step="10" class="inline-num" style="width:110px" value="${hhBudget}" data-hhbudget>
+        </div>
+        <table><tbody>
+        ${hhCategories.map(c=>`
+          <tr class="row" data-kind="hhcategory" data-id="${c.id}">
+            <td class="name-cell"><input type="text" value="${escAttr(c.label)}" data-field="label"></td>
+            <td style="width:44px"><input type="color" value="${c.color}" data-field="color" style="width:36px;height:26px;border:none;background:none;padding:0;"></td>
+          </tr>`).join('')}
+        </tbody></table>
+        <button class="add-btn" style="width:100%;margin-top:12px;" data-action="open-add-hhcat">+ Kategorie hinzufügen</button>
+      </div>
+    </details>
+
+    <div class="card" data-tab="auswertung">
+      <div class="card-head"><h2>Wohin geht dein Geld</h2></div>
+      <div class="hint">Alle Ausgaben dieses Monats, geglättet gerechnet — damit Quartals- und Jahresrechnungen die Verteilung nicht verzerren.</div>
+      ${donutTotal>0 ? `
+      <div class="donut-wrap">
+        <svg viewBox="0 0 144 144" width="144" height="144" role="img" aria-label="Ausgabenverteilung">
+          <circle cx="72" cy="72" r="${DR}" fill="none" stroke="var(--panel-alt)" stroke-width="20"></circle>
+          ${donutSegs}
+          <text class="donut-center" x="72" y="68" text-anchor="middle" fill="#D8DCE2" font-size="15" font-weight="600">${eur(donutTotal).replace(/\s?€/,'')}</text>
+          <text class="donut-center" x="72" y="84" text-anchor="middle" fill="#8B94A3" font-size="9" letter-spacing="1">€ / MONAT</text>
+        </svg>
+        <div class="donut-legend">${donutLegend}</div>
+      </div>
+      <div style="margin-top:16px;">${catRows}</div>`
+      : '<div class="hint">Noch keine Ausgaben erfasst.</div>'}
+    </div>
+
+    <div class="card" data-tab="monat">
+      <div class="card-head"><h2>Budgets</h2></div>
+      <div class="hint">Monatslimit für variable Ausgaben (Bewegungen) je Kategorie. Limits stellst du im Tab „Auswertung" unter „Kategorien verwalten" ein.</div>
+      ${budgetRows || '<div class="hint">Noch keine Budgets gesetzt.</div>'}
+    </div>
+
+    <div class="card" data-tab="paar">
+      <div class="card-head"><h2>Paar-Aufteilung</h2></div>
+      <div class="hint">Faire Verteilung der gemeinsamen Kosten nach Nettoeinkommen (Ø/Monat). Jeden Fixkostenposten kannst du oben als <b>Gemeinsam</b> oder <b>Privat</b> markieren.</div>
+
+      <div class="biz-flow" style="border-top:none;padding-top:2px;">
+        <div class="biz-line"><span>Netto Ich <span class="note" style="display:inline">aus Einnahmen</span></span>
+          <span class="amount-txt">${eur(incA)}</span></div>
+        <div class="biz-line"><span>Netto <input type="text" class="name-inline" value="${escAttr(pName)}" data-household="partnerName"></span>
+          <span class="amount-txt"><input type="number" step="10" class="inline-num" style="width:88px" value="${incB}" data-household="incomeB"> €</span></div>
+        <div class="biz-line result"><span>Zusammen</span><span class="amount-txt">${eur(incTotal)}</span></div>
+        ${sharedIncome>0?`<div class="biz-line"><span>+ Gemeinsame Einnahmen <span class="note" style="display:inline">Kindergeld &amp; Co. — zählt keinem allein</span></span><span class="amount-txt" style="color:var(--pos)">${eur(sharedIncome)}</span></div>`:''}
+      </div>
+
+      ${hasB ? `
+      <div class="prog-wrap">
+        <div class="prog-track"><div class="prog-fill" style="width:${Math.round(shareApct*100)}%;background:#5C7A99"></div></div>
+        <div class="prog-meta"><span>Ich ${Math.round(shareApct*100)}&nbsp;%</span><span>${escHtml(pName)} ${Math.round(shareBpct*100)}&nbsp;%</span></div>
+      </div>` : `<div class="split-hint">Trag ${escHtml(pName)}s Netto ein — dann rechne ich die faire Quote aus. Bis dahin gilt 50/50. (${escHtml(pName)} überweist dir aktuell ${eur(partnerTransfer)} als Anteil.)</div>`}
+
+      <div style="margin-top:12px;">
+        <div class="split-row"><div class="left"><span class="dot" style="background:var(--gold)"></span>Gemeinsame Kosten (Ø)</div><div class="euro">${eur(sharedFixed)}</div></div>
+        ${sharedIncome>0?`<div class="split-row"><div class="left"><span class="dot" style="background:var(--pos)"></span>− Gemeinsame Einnahmen</div><div class="euro" style="color:var(--pos)">− ${eur(sharedIncome)}</div></div>
+        <div class="split-row"><div class="left"><b>Rest, den ihr aufteilt</b></div><div class="euro">${eur(sharedNet)}</div></div>`:''}
+        <div class="split-row"><div class="left">Dein fairer Anteil</div><div class="euro">${eur(fairA)}</div></div>
+        <div class="split-row"><div class="left">${escHtml(pName)}s fairer Anteil</div><div class="euro">${eur(fairB)}</div></div>
+      </div>
+      <div class="split-hint">${sharedIncome>0?`Kindergeld & Co. fließen zuerst in die gemeinsamen Kosten — erst der Rest wird nach Einkommen geteilt. `:''}Zum Vergleich 50/50: je <b>${eur(sharedNet/2)}</b>.${hasB && Math.abs(fairB - sharedNet/2) >= 1 ? ` Nach Einkommen zahlt ${escHtml(pName)} ${fairB<sharedNet/2?'weniger':'mehr'} — das ist der faire Ausgleich.` : ''}${partnerTransfer>0 && hasB ? ` ${escHtml(pName)} überweist aktuell ${eur(partnerTransfer)}; fair wären ${eur(fairB)}${Math.abs(partnerTransfer-fairB)>=10?` (${partnerTransfer<fairB?'zu wenig':'mehr als nötig'})`:''}.` : ''}</div>
+
+      <div class="pair-head">Was bleibt jedem (Ø/Monat)</div>
+      <div class="pair-grid">
+        <span></span><span class="h">Ich</span><span class="h">${escHtml(pName)}</span>
+        <span>Einkommen</span><span class="v">${eur(incA)}</span><span class="v">${eur(incB)}</span>
+        <span>− Anteil gemeinsam${sharedIncome>0?' <span class="note" style="display:inline">nach Kindergeld</span>':''}</span><span class="v">${eur(fairA)}</span><span class="v">${eur(fairB)}</span>
+        <span>− Private Fixkosten</span><span class="v">${eur(privA)}</span><span class="v">${eur(privB)}</span>
+        <span>− Spontanausgaben</span><span class="v">${eur(t.variableTotal)}</span><span class="v">—</span>
+        <span class="tot">Bleibt frei</span><span class="v tot ${restA>=0?'':'neg'}">${eur(restA)}</span><span class="v tot ${restB>=0?'':'neg'}">${eur(restB)}</span>
+      </div>
+      <div class="split-hint">Deine faire Sparquote: <b>${fairRateA}&nbsp;%</b>${hasB?` · Haushalt zusammen: <b>${hhRate}&nbsp;%</b>`:''}. Faires Ziel: beiden bleibt anteilig etwa gleich viel Luft. ${escHtml(pName)}s private Posten kannst du oben mit „Privat → ${escHtml(pName)}" erfassen.</div>
+    </div>
+
+    <div class="card" data-tab="sparen">
+      <div class="card-head"><h2>Vermögen</h2></div>
+      <div class="hint">Kontostände & Depot — hier trägst du ein, was wo liegt. Über ↕ einzelne Ein-/Auszahlungen protokollieren, statt den Stand nur zu überschreiben.</div>
+      <table><tbody>${accountRows}
+        <tr class="sum-row"><td>Gesamtvermögen</td><td class="amount">${eur(totalWealth)}</td><td></td></tr>
+      </tbody></table>
+      <button class="add-btn" style="width:100%;margin-top:10px;" data-action="open-add-account">+ Konto hinzufügen</button>
+      <div class="split-hint">Dein Notgroschen (${eur(sparSum)}) reicht für <b>${runwayMonths.toFixed(1)} Monate</b> Fixkosten. ${runwayMonths<3?'Unter 3 Monaten — mit Kind unterwegs würde ich das priorisiert auffüllen.':runwayMonths<4?'Solide; mit zweitem Kind sind 4–6 Monate ein gutes Ziel.':'Gut abgesichert.'}</div>
+    </div>
+
+    <div class="card" data-tab="sparen">
+      <div class="card-head"><h2>Sparziele</h2>
+        <button class="add-btn" data-action="add-goal">+ Ziel</button>
+      </div>
+      <div class="hint">Eigene Töpfe mit Zielbetrag und monatlicher Sparrate. Trag den aktuellen Stand ein, ich rechne aus, wann du am Ziel bist.</div>
+      ${goalRows || '<div class="hint">Noch keine Ziele — leg mit „+ Ziel" los.</div>'}
+      ${goalsMonthlySum>0 ? `<div class="split-hint">Summe deiner aktiven Sparraten: <b>${eur(goalsMonthlySum)}/Monat</b>. ${goalsMonthlySum > Math.max(0,t.balanceSmooth) ? `Das ist mehr als dein planbarer Überschuss (${eur(Math.max(0,t.balanceSmooth))}) — Ziele oder Raten anpassen.` : `Passt in deinen planbaren Überschuss von ${eur(Math.max(0,t.balanceSmooth))}.`}</div>`:''}
+    </div>
+
+    <div class="card" data-tab="sparen">
+      <div class="card-head"><h2>Überschuss verteilen</h2></div>
+      <div class="hint">Vorschlag auf Basis des planbaren Überschusses (Ø/Monat): ${eur(surplus)}. Rechnungs-lastige Monate fängst du aus dem Notgroschen ab.</div>
+
+      <div class="prog-wrap">
+        <div class="prog-track"><div class="prog-fill" style="width:${progPct}%"></div></div>
+        <div class="prog-meta">
+          <span>Notgroschen: ${eur(sparSum)} <span style="opacity:.7">(= Sparkonten)</span></span>
+          <span>Ziel: <input type="number" step="500" class="inline-num" style="width:74px" value="${inv.ziel}" data-invest="ziel"> € (${progPct}&nbsp;%)</span>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <div class="split-row">
+          <div class="left"><span class="dot" style="background:var(--pos)"></span>Notgroschen (Tagesgeld)
+            <input type="number" min="0" max="100" class="inline-num" value="${inv.splitNotgroschen}" data-invest="splitNotgroschen"> %</div>
+          <div class="euro">${eur(splitAmt(inv.splitNotgroschen))}</div>
+        </div>
+        <div class="split-row">
+          <div class="left"><span class="dot" style="background:#5C7A99"></span>ETF-Sparplan
+            <input type="number" min="0" max="100" class="inline-num" value="${inv.splitEtf}" data-invest="splitEtf"> %</div>
+          <div class="euro">${eur(splitAmt(inv.splitEtf))}</div>
+        </div>
+        <div class="split-row">
+          <div class="left"><span class="dot" style="background:var(--gold)"></span>Frei / Gönnen
+            <input type="number" min="0" max="100" class="inline-num" value="${inv.splitFrei}" data-invest="splitFrei"> %</div>
+          <div class="euro">${eur(splitAmt(inv.splitFrei))}</div>
+        </div>
+      </div>
+      ${splitSum!==100 ? `<div class="split-hint">Die Aufteilung ergibt aktuell <b>${splitSum}&nbsp;%</b> statt 100&nbsp;%.</div>`:''}
+      ${notgroschenFull
+        ? `<div class="split-hint"><b>Notgroschen voll.</b> Du kannst den Notgroschen-Anteil jetzt in den ETF umleiten.</div>`
+        : `<div class="split-hint">Solange der Notgroschen unter dem Ziel liegt, hat er Vorrang vor dem Investieren.</div>`}
+    </div>
+
+    <div class="card" data-tab="sparen">
+      <div class="card-head"><h2>Wenn du dranbleibst</h2></div>
+      <div class="hint">Startkapital ist dein Depotstand (${eur(pjStart)}). Reine Modellrechnung mit konstanter Rendite — die Realität schwankt, teils kräftig.</div>
+      <div class="proj-inputs">
+        <label><input type="number" step="25" min="0" class="inline-num" style="width:66px" value="${pjMonthly}" data-proj="monthly"> € / Monat</label>
+        <label><input type="number" step="1" min="1" max="45" class="inline-num" style="width:46px" value="${pjYears}" data-proj="years"> Jahre</label>
+        <label><input type="number" step="0.5" min="0" max="15" class="inline-num" style="width:52px" value="${pjRate}" data-proj="rate"> % p. a.</label>
+      </div>
+      <svg viewBox="0 0 ${PW} ${PH}" width="100%" height="${PH}" preserveAspectRatio="none" role="img" aria-label="Vermögensentwicklung">
+        <defs>
+          <linearGradient id="gGain" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#4E9C7C" stop-opacity="0.55"/>
+            <stop offset="100%" stop-color="#4E9C7C" stop-opacity="0.05"/>
+          </linearGradient>
+        </defs>
+        <line x1="${PLx}" y1="${PH-PB}" x2="${PW-PLx}" y2="${PH-PB}" stroke="#2A323D" stroke-width="1"/>
+        <path d="${pjArea('v')}" fill="url(#gGain)"/>
+        <path d="${pjArea('paid')}" fill="#5C7A99" fill-opacity="0.45"/>
+        <path d="${pjLine('v')}" fill="none" stroke="#4E9C7C" stroke-width="2"/>
+        <path d="${pjLine('paid')}" fill="none" stroke="#5C7A99" stroke-width="1.5" stroke-dasharray="3 3"/>
+        ${pjTicks}
+      </svg>
+      <div class="proj-legend">
+        <span><i class="proj-key" style="background:#5C7A99"></i>Eingezahlt ${eur(pjEnd.paid)}</span>
+        <span><i class="proj-key" style="background:#4E9C7C"></i>Endwert ${eur(pjEnd.v)}</span>
+      </div>
+      <div class="split-hint">Von den ${eur(pjEnd.v)} kämen <b>${eur(pjGain)}</b> nicht von dir, sondern aus dem Zinseszins — das ist ${pjEnd.paid>0?Math.round(pjGain/pjEnd.paid*100):0}&nbsp;% obendrauf auf deine Einzahlungen. Der Hebel ist die Laufzeit, nicht die Sparrate: dieselbe Rate über 25 statt 15 Jahre verändert das Ergebnis stärker als eine Verdopplung des Betrags.</div>
+    </div>
+
+    <div class="card" data-tab="sparen">
+      <div class="card-head"><h2>Spar- & Anlagetipps</h2></div>
+      <div class="hint">Aus deinen eigenen Zahlen abgeleitet — aktualisiert sich mit jedem Eintrag.</div>
+      ${tipRows}
+      <div class="disclaimer">Das sind allgemeine Hinweise und Rechenbeispiele, keine Anlageberatung — ich kenne weder deine Steuersituation noch deine Risikotragfähigkeit vollständig. Für verbindliche Entscheidungen (Depot, Versicherungen, Steuer) ist eine Beratung durch eine qualifizierte Person der richtige Weg.</div>
+    </div>
+
+    <div class="card" data-tab="auswertung">
+      <div class="card-head"><h2>Kleinunternehmen</h2>
+        <div style="display:flex;gap:6px;">
+          <button class="add-btn" data-action="add-biz">+ Einnahme</button>
+          <button class="add-btn" data-action="add-biz-out">+ Ausgabe</button>
+        </div>
+      </div>
+      <div class="hint">Läuft getrennt vom Privaten — taucht nicht in den Monatszahlen oben auf.</div>
+      <table><tbody>${bizRows || ''}
+        ${(monthData.business||[]).length? `<tr class="sum-row"><td colspan="3">Netto ${monthLabel(currentMonthKey)}</td><td class="amount">${eur(bizMonthTotal)}</td><td></td></tr>`:''}
+      </tbody></table>
+      ${!bizRows ? `<div class="hint" style="margin-top:6px;">Noch nichts erfasst in diesem Monat.</div>`:''}
+      <div class="biz-flow">
+        <div class="biz-line"><span>Einnahmen ${year}</span><span class="amount-txt">${eur(biz.ein)}</span></div>
+        <div class="biz-line"><span>− Ausgaben ${year}</span><span class="amount-txt" style="color:var(--neg)">− ${eur(biz.aus)}</span></div>
+        <div class="biz-line" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px;"><span><b>Gewinn ${year}</b></span><span class="amount-txt"><b>${eur(biz.total)}</b></span></div>
+        <div class="biz-line">
+          <span>Steuerrücklage (<input type="number" min="0" max="60" class="inline-num" value="${bizRate}" data-invest="bizTaxRate"> % Grenzsteuersatz)</span>
+          <span class="amount-txt" style="color:var(--neg)">− ${eur(bizTax)}</span>
+        </div>
+        <div class="biz-line">
+          <span>Sparanteil (<input type="number" min="0" max="60" class="inline-num" value="${bizSaveRateVal}" data-invest="bizSaveRate"> %)</span>
+          <span class="amount-txt" style="color:var(--muted)">− ${eur(bizSave)}</span>
+        </div>
+        <div class="biz-line result"><span>Gönn-Topf ${year}</span><span class="amount-txt">${eur(bizFree)}</span></div>
+      </div>
+      <div class="split-hint">
+        Auf dem Kleingewerbe-Konto liegen aktuell <b>${eur(gewerbeSum)}</b> —
+        ${gewerbeSum >= (bizTax+bizSave)
+          ? `Rücklage (${eur(bizTax)}) und Sparanteil (${eur(bizSave)}) sind damit gedeckt. Alles darüber ist Gönn-Topf.`
+          : `benötigt für Rücklage + Sparanteil: <b>${eur(bizTax+bizSave)}</b>. Am besten nichts entnehmen, bis die Lücke geschlossen ist.`}
+      </div>
+      <div class="split-hint">Faustregel für nebenberufliches Gewerbe neben Beamtengehalt: dein Kleingewerbe-Gewinn wird zu deinem <b>persönlichen Grenzsteuersatz</b> versteuert — der liegt on top vom Beamtengehalt oft schon bei 35–42&nbsp;%, plus Soli/Kirchensteuer. Lieber die Rücklage etwas zu hoch ansetzen als zu niedrig; ein Steuerberater kann den genauen Satz aus deinem letzten Bescheid ableiten. Der Sparanteil (z. B. 15–25&nbsp;%) ist dein eigener Puffer für Anschaffungen (Maschinen, Fahrzeug) oder Altersvorsorge — unabhängig vom Finanzamt. Beide Sätze beziehen sich auf den Gewinn (Einnahmen − Ausgaben), nicht auf den rohen Umsatz. Was danach übrig bleibt, ist wirklich frei verfügbar.</div>
+    </div>
+
+    <details class="settings" data-tab="sparen" open>
+      <summary>Kontobewegungen erfassen</summary>
+      <div class="card">
+        <div class="hint">Für Spar-, Depot- oder Kleingewerbe-Konto einzelne Ein- und Auszahlungen protokollieren — praktisch, um später nachzuvollziehen, woher eine Kontostand-Änderung kam. Der Kontostand oben bleibt manuell editierbar; hier kannst du die Bewegungen des laufenden Monats optional draufrechnen. Tipp: schneller geht's über das ↕ direkt neben jedem Konto in „Vermögen".</div>
+        <div class="fg-list" style="margin-top:10px;">
+        ${(settings.accounts||[]).map(a=>`
+          <button type="button" class="fg-head" style="width:100%;" data-action="open-acctx" data-acc="${a.id}">
+            <span class="fg-badge" style="background:var(--panel-alt);color:var(--muted)">📖</span>
+            <span class="fg-head-text"><span class="fg-title">${escHtml(a.label)}</span><span class="fg-sub">Bewegungen erfassen</span></span>
+          </button>`).join('')}
+        </div>
+      </div>
+    </details>
+
+    <div class="card" data-tab="auswertung">
+      <div class="card-head"><h2>Verlauf</h2></div>
+      <div class="hint">${balWord==='Fehlbetrag'?'Fehlbetrag':'Überschuss'} der letzten 6 Monate</div>
+      <div class="trend">${trendBars}</div>
+    </div>
+
+    <div class="card" data-tab="auswertung">
+      <div class="card-head"><h2>Jahr ${year}</h2></div>
+      <div class="hint">Summiert über die erfassten Monate in ${year} (${ys.months} ${ys.months===1?'Monat':'Monate'}).</div>
+      <div class="pair-grid" style="grid-template-columns:1fr auto;">
+        <span>Einnahmen</span><span class="v">${eur(ys.inc)}</span>
+        <span>Ausgaben (Ist)</span><span class="v">${eur(ys.exp)}</span>
+        <span>Challenge-Kosten</span><span class="v">${eur(challenge.total)}</span>
+        <span>Kleingewerbe-Umsatz</span><span class="v">${eur(biz.total)}</span>
+        <span class="tot">Gespart ${year}</span><span class="v tot ${ys.save>=0?'pos':'neg'}">${eur(ys.save)}</span>
+        <span>Sparquote Jahr</span><span class="v ${ysRate>=15?'pos':''}">${ysRate}&nbsp;%</span>
+      </div>
+    </div>
+
+    <details class="settings" data-tab="auswertung">
+      <summary>Kategorien verwalten</summary>
+      <div class="card">
+        <table><tbody>
+        ${settings.categories.map(c=>`
+          <tr class="row" data-kind="category" data-id="${c.id}">
+            <td class="name-cell"><input type="text" value="${escAttr(c.label)}" data-field="label"></td>
+            <td style="width:118px;text-align:right;"><span class="note" style="display:inline">Limit </span><input type="number" step="10" class="inline-num" value="${Number(c.budget||0)}" data-field="budget"> €</td>
+            <td style="width:44px"><input type="color" value="${c.color}" data-field="color" style="width:36px;height:26px;border:none;background:none;padding:0;"></td>
+          </tr>`).join('')}
+        </tbody></table>
+        <div class="hint" style="margin-top:6px;">Limit = monatliches Budget für variable Ausgaben in dieser Kategorie. 0 = kein Limit.</div>
+        <button class="add-btn" style="width:100%;margin-top:12px;" data-action="open-add-cat">+ Kategorie hinzufügen</button>
+      </div>
+    </details>
+  `;
+  app.setAttribute('data-active-tab', activeTab);
+
+  const tabbar = document.getElementById('tabbar');
+  const TABS = [['monat','Monat','📇'],['haushalt','Haushalt','🛒'],['paar','Paar','🤝'],['sparen','Sparen','🌱'],['auswertung','Auswertung','📊']];
+  tabbar.innerHTML = TABS.map(([id,label,ic])=>
+    `<button class="tab ${activeTab===id?'active':''}" data-action="switch-tab" data-tab-id="${id}">
+       <span class="tab-ic">${ic}</span>${label}
+     </button>`).join('');
+}
+
+function escAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+// ---------- Event delegation ----------
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('[data-action]');
+  if(!btn) return;
+  const action = btn.dataset.action;
+
+  if(action==='prev-month'){ await loadMonth(shiftMonth(currentMonthKey,-1)); await loadHistory(); render(); return; }
+  if(action==='next-month'){ await loadMonth(shiftMonth(currentMonthKey,1)); await loadHistory(); render(); return; }
+
+  if(action==='switch-tab'){
+    activeTab = btn.dataset.tabId;
+    try{ localStorage.setItem('kassenbuch:ui:tab', activeTab); }catch(e){}
+    render();
+    window.scrollTo({top:0});
+    return;
+  }
+  if(action==='toggle-group'){
+    const cat=btn.dataset.cat;
+    expandedGroups.has(cat) ? expandedGroups.delete(cat) : expandedGroups.add(cat);
+    render(); return;
+  }
+  if(action==='toggle-all-groups'){
+    if(expandedGroups.size>0){ expandedGroups.clear(); }
+    else { settings.fixedCosts.forEach(f=>expandedGroups.add(f.category)); }
+    render(); return;
+  }
+  if(action==='export-backup'){ exportBackup(); return; }
+  if(action==='import-backup'){ document.getElementById('import-file').click(); return; }
+
+  if(action==='close-sheet'){ closeSheet(); return; }
+  if(action==='sheet-submit'){ if(sheetSubmitHandler){ await sheetSubmitHandler(); } return; }
+  if(action==='sheet-chip'){
+    btn.parentElement.querySelectorAll('.cchip').forEach(c=>c.classList.remove('selected'));
+    btn.classList.add('selected');
+    return;
+  }
+  if(action==='undo-delete'){
+    if(lastUndo){ await lastUndo.restore(); lastUndo=null; }
+    hideToast();
+    return;
+  }
+
+  if(action==='add-income'){
+    monthData.income.push({id:uid(), label:'Neue Einnahme', amount:0, person:'ich'});
+    await storageSet(`month:${currentMonthKey}`, monthData); await loadHistory(); render(); return;
+  }
+  if(action==='add-kindergeld'){
+    const n = (monthData.income||[]).filter(i=>i.person==='gemeinsam' && /kindergeld/i.test(i.label||'')).length;
+    monthData.income.push({id:uid(), label: n?`Kindergeld ${n+1}. Kind`:'Kindergeld', amount:KINDERGELD_2026, person:'gemeinsam'});
+    await storageSet(`month:${currentMonthKey}`, monthData); await loadHistory(); render(); return;
+  }
+  if(action==='del-income'){
+    if(!handleDeleteTap(btn)) return;
+    const removed = monthData.income.find(i=>i.id===btn.dataset.id);
+    monthData.income = monthData.income.filter(i=>i.id!==btn.dataset.id);
+    await storageSet(`month:${currentMonthKey}`, monthData); await loadHistory(); render();
+    showUndoToast(`„${removed.label}" gelöscht`, async ()=>{
+      monthData.income.push(removed); await storageSet(`month:${currentMonthKey}`, monthData); await loadHistory(); render();
+    });
+    return;
+  }
+
+  if(action==='add-fixed'){
+    settings.fixedCosts.push({id:uid(), label:'Neuer Posten', category:'sonstiges', amount:0, interval:'monat', anchor:1, scope:'gemeinsam', who:'ich'});
+    expandedGroups.add('sonstiges');
+    await storageSet('settings', settings); render(); return;
+  }
+  if(action==='del-fixed'){
+    if(!handleDeleteTap(btn)) return;
+    const removed = settings.fixedCosts.find(f=>f.id===btn.dataset.id);
+    settings.fixedCosts = settings.fixedCosts.filter(f=>f.id!==btn.dataset.id);
+    await storageSet('settings', settings); await loadHistory(); render();
+    showUndoToast(`„${removed.label}" gelöscht`, async ()=>{
+      settings.fixedCosts.push(removed); await storageSet('settings', settings); await loadHistory(); render();
+    });
+    return;
+  }
+
+  if(action==='open-add-tx'){
+    const cats = settings.categories.map(cc=>`<button type="button" class="cchip ${cc.id==='spontan'?'selected':''}" data-action="sheet-chip" data-cat="${cc.id}">
+        <span class="dot" style="background:${cc.color}"></span>${cc.label}</button>`).join('');
+    openSheet('Neue Bewegung', `
+      <div class="field"><label>Bezeichnung</label><input type="text" id="s-tx-label" placeholder="z. B. Baumarkt" autofocus></div>
+      <div class="field"><label>Betrag (€)</label><input type="number" step="0.01" inputmode="decimal" id="s-tx-amount" placeholder="0,00"></div>
+      <div class="field"><label>Datum</label><input type="date" id="s-tx-date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="field"><label>Kategorie</label><div class="chip-grid" id="s-tx-cats">${cats}</div></div>
+      <button class="sheet-submit" data-action="sheet-submit">Hinzufügen</button>
+    `, async ()=>{
+      const label = document.getElementById('s-tx-label').value.trim() || 'Ausgabe';
+      const amount = parseFloat(document.getElementById('s-tx-amount').value) || 0;
+      const date = document.getElementById('s-tx-date').value;
+      const selChip = document.querySelector('#s-tx-cats .cchip.selected');
+      const category = selChip ? selChip.dataset.cat : (settings.categories[0]||{}).id;
+      monthData.transactions.push({id:uid(), date, label, category, amount});
+      await storageSet(`month:${currentMonthKey}`, monthData); await loadHistory(); closeSheet(); render();
+    });
+    return;
+  }
+  if(action==='del-tx'){
+    if(!handleDeleteTap(btn)) return;
+    const removed = monthData.transactions.find(t=>t.id===btn.dataset.id);
+    monthData.transactions = monthData.transactions.filter(t=>t.id!==btn.dataset.id);
+    await storageSet(`month:${currentMonthKey}`, monthData); await loadHistory(); render();
+    showUndoToast(`„${removed.label}" gelöscht`, async ()=>{
+      monthData.transactions.push(removed); await storageSet(`month:${currentMonthKey}`, monthData); await loadHistory(); render();
+    });
+    return;
+  }
+
+  if(action==='add-biz'){
+    monthData.business = monthData.business || [];
+    monthData.business.push({id:uid(), date:new Date().toISOString().slice(0,10), label:'Auftrag', amount:0, type:'ein'});
+    await storageSet(`month:${currentMonthKey}`, monthData); render(); return;
+  }
+  if(action==='add-biz-out'){
+    monthData.business = monthData.business || [];
+    monthData.business.push({id:uid(), date:new Date().toISOString().slice(0,10), label:'Ausgabe', amount:0, type:'aus'});
+    await storageSet(`month:${currentMonthKey}`, monthData); render(); return;
+  }
+  if(action==='del-biz'){
+    if(!handleDeleteTap(btn)) return;
+    const removed = (monthData.business||[]).find(b=>b.id===btn.dataset.id);
+    monthData.business = (monthData.business||[]).filter(b=>b.id!==btn.dataset.id);
+    await storageSet(`month:${currentMonthKey}`, monthData); render();
+    showUndoToast(`„${removed.label}" gelöscht`, async ()=>{
+      monthData.business.push(removed); await storageSet(`month:${currentMonthKey}`, monthData); render();
+    });
+    return;
+  }
+
+  if(action==='open-acctx'){ openAccountLedger(btn.dataset.acc); return; }
+  if(action==='add-acctx'){
+    const accId = btn.dataset.acc;
+    const labelEl = document.getElementById('s-acctx-label');
+    const amountEl = document.getElementById('s-acctx-amount');
+    const dateEl = document.getElementById('s-acctx-date');
+    const label = labelEl.value.trim() || 'Buchung';
+    const amount = parseFloat(amountEl.value)||0;
+    const date = dateEl.value || new Date().toISOString().slice(0,10);
+    const typeChip = document.querySelector('#sheet .cchip.selected');
+    const type = typeChip ? typeChip.dataset.type : 'ein';
+    if(amount>0){
+      monthData.accountTx = monthData.accountTx || {};
+      monthData.accountTx[accId] = monthData.accountTx[accId] || [];
+      monthData.accountTx[accId].push({id:uid(), date, label, amount, type});
+      await storageSet(`month:${currentMonthKey}`, monthData);
+    }
+    openAccountLedger(accId);
+    return;
+  }
+  if(action==='del-acctx'){
+    if(!handleDeleteTap(btn)) return;
+    const accId = btn.dataset.acc;
+    monthData.accountTx[accId] = (monthData.accountTx[accId]||[]).filter(t=>t.id!==btn.dataset.id);
+    await storageSet(`month:${currentMonthKey}`, monthData);
+    openAccountLedger(accId);
+    return;
+  }
+  if(action==='apply-acctx'){
+    const accId = btn.dataset.acc;
+    const acc = (settings.accounts||[]).find(a=>a.id===accId);
+    if(acc){
+      const list = (monthData.accountTx && monthData.accountTx[accId]) || [];
+      const netto = list.reduce((s,t)=>s+(t.type==='aus'?-Number(t.amount||0):Number(t.amount||0)),0);
+      acc.amount = Math.round((Number(acc.amount||0)+netto)*100)/100;
+      await storageSet('settings', settings);
+    }
+    closeSheet(); render();
+    return;
+  }
+  if(action==='open-add-account'){
+    const opts = ACCOUNT_TYPES_JS.map(ty=>`<option value="${ty.id}">${ty.label}</option>`).join('');
+    openSheet('Neues Konto', `
+      <div class="field"><label>Kontoname</label><input type="text" id="s-acc-label" placeholder="z. B. Tagesgeld" autofocus></div>
+      <div class="field"><label>Art</label><select id="s-acc-type">${opts}</select></div>
+      <div class="field"><label>Aktueller Stand (€)</label><input type="number" step="0.01" inputmode="decimal" id="s-acc-amount" placeholder="0,00"></div>
+      <button class="sheet-submit" data-action="sheet-submit">Hinzufügen</button>
+    `, async ()=>{
+      const label = document.getElementById('s-acc-label').value.trim() || 'Konto';
+      const type = document.getElementById('s-acc-type').value;
+      const amount = parseFloat(document.getElementById('s-acc-amount').value) || 0;
+      settings.accounts = settings.accounts || [];
+      settings.accounts.push({id:uid(), label, type, amount});
+      await storageSet('settings', settings); closeSheet(); render();
+    });
+    return;
+  }
+  if(action==='del-account'){
+    if(!handleDeleteTap(btn)) return;
+    const removed = (settings.accounts||[]).find(a=>a.id===btn.dataset.id);
+    settings.accounts = (settings.accounts||[]).filter(a=>a.id!==btn.dataset.id);
+    await storageSet('settings', settings); render();
+    showUndoToast(`„${removed.label}" gelöscht`, async ()=>{
+      settings.accounts.push(removed); await storageSet('settings', settings); render();
+    });
+    return;
+  }
+
+  if(action==='add-goal'){
+    settings.goals = settings.goals || [];
+    settings.goals.push({id:uid(), label:'Neues Ziel', target:1000, current:0, monthly:100});
+    await storageSet('settings', settings); render(); return;
+  }
+  if(action==='del-goal'){
+    if(!handleDeleteTap(btn)) return;
+    const removed = (settings.goals||[]).find(g=>g.id===btn.dataset.id);
+    settings.goals = (settings.goals||[]).filter(g=>g.id!==btn.dataset.id);
+    await storageSet('settings', settings); render();
+    showUndoToast(`„${removed.label}" gelöscht`, async ()=>{
+      settings.goals.push(removed); await storageSet('settings', settings); render();
+    });
+    return;
+  }
+
+  if(action==='open-add-hh'){
+    const hhCategories = settings.hhCategories || HOUSEHOLD_CATEGORY_DEFAULTS;
+    const cats = hhCategories.map(cc=>`<button type="button" class="cchip ${cc.id==='sonstiges'?'selected':''}" data-action="sheet-chip" data-cat="${cc.id}">
+        <span class="dot" style="background:${cc.color}"></span>${cc.label}</button>`).join('');
+    openSheet('Neue Ausgabe', `
+      <div class="field"><label>Bezeichnung</label><input type="text" id="s-hh-label" placeholder="z. B. REWE" autofocus></div>
+      <div class="field"><label>Betrag (€)</label><input type="number" step="0.01" inputmode="decimal" id="s-hh-amount" placeholder="0,00"></div>
+      <div class="field"><label>Datum</label><input type="date" id="s-hh-date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="field"><label>Kategorie</label><div class="chip-grid" id="s-hh-cats">${cats}</div></div>
+      <button class="sheet-submit" data-action="sheet-submit">Hinzufügen</button>
+    `, async ()=>{
+      const label = document.getElementById('s-hh-label').value.trim() || 'Ausgabe';
+      const amount = parseFloat(document.getElementById('s-hh-amount').value) || 0;
+      const date = document.getElementById('s-hh-date').value;
+      const selChip = document.querySelector('#s-hh-cats .cchip.selected');
+      const category = selChip ? selChip.dataset.cat : (hhCategories[0]||{}).id;
+      monthData.household = monthData.household || [];
+      monthData.household.push({id:uid(), date, label, category, amount});
+      await storageSet(`month:${currentMonthKey}`, monthData); closeSheet(); render();
+    });
+    return;
+  }
+  if(action==='del-hh'){
+    if(!handleDeleteTap(btn)) return;
+    const removed = (monthData.household||[]).find(h=>h.id===btn.dataset.id);
+    monthData.household = (monthData.household||[]).filter(h=>h.id!==btn.dataset.id);
+    await storageSet(`month:${currentMonthKey}`, monthData); render();
+    showUndoToast(`„${removed.label}" gelöscht`, async ()=>{
+      monthData.household.push(removed); await storageSet(`month:${currentMonthKey}`, monthData); render();
+    });
+    return;
+  }
+  if(action==='import-hh-csv'){ document.getElementById('import-hh-csv').click(); return; }
+  if(action==='import-hh-shot'){ document.getElementById('import-hh-shot').click(); return; }
+  if(action==='open-add-hhcat'){
+    openSheet('Neue Kategorie', `
+      <div class="field"><label>Name</label><input type="text" id="s-hhcat-label" placeholder="z. B. Tierbedarf" autofocus></div>
+      <div class="field"><label>Farbe</label><input type="color" id="s-hhcat-color" value="#8B94A3" style="height:44px;padding:2px;"></div>
+      <button class="sheet-submit" data-action="sheet-submit">Hinzufügen</button>
+    `, async ()=>{
+      const label = document.getElementById('s-hhcat-label').value.trim();
+      const color = document.getElementById('s-hhcat-color').value;
+      if(label){ settings.hhCategories = settings.hhCategories || []; settings.hhCategories.push({id:uid(), label, color}); await storageSet('settings', settings); }
+      closeSheet(); render();
+    });
+    return;
+  }
+  if(action==='open-add-cat'){
+    openSheet('Neue Kategorie', `
+      <div class="field"><label>Name</label><input type="text" id="s-cat-label" placeholder="z. B. Kinder" autofocus></div>
+      <div class="field"><label>Farbe</label><input type="color" id="s-cat-color" value="#8B94A3" style="height:44px;padding:2px;"></div>
+      <button class="sheet-submit" data-action="sheet-submit">Hinzufügen</button>
+    `, async ()=>{
+      const label = document.getElementById('s-cat-label').value.trim();
+      const color = document.getElementById('s-cat-color').value;
+      if(label){ settings.categories.push({id:uid(), label, color, budget:0}); await storageSet('settings', settings); }
+      closeSheet(); render();
+    });
+    return;
+  }
+});
+
+document.addEventListener('change', async (e)=>{
+  if(e.target.id==='import-file'){
+    if(e.target.files && e.target.files[0]) importBackup(e.target.files[0]);
+    e.target.value=''; return;
+  }
+  if(e.target.id==='import-hh-csv'){
+    if(e.target.files && e.target.files[0]) importHouseholdCsv(e.target.files[0]);
+    e.target.value=''; return;
+  }
+  if(e.target.id==='import-hh-shot'){
+    if(e.target.files && e.target.files[0]) handleScreenshotFile(e.target.files[0]);
+    e.target.value=''; return;
+  }
+  // Paar-Aufteilung: Einkommen & Partnername
+  const hhCell = e.target.closest('[data-household]');
+  if(hhCell){
+    const key = hhCell.dataset.household;
+    settings.household = settings.household || {};
+    settings.household[key] = (key==='partnerName') ? hhCell.value : (parseFloat(hhCell.value)||0);
+    await storageSet('settings', settings);
+    render();
+    return;
+  }
+  // Haushaltskonto-Budget
+  const hhBudgetCell = e.target.closest('[data-hhbudget]');
+  if(hhBudgetCell){
+    settings.householdBudget = parseFloat(hhBudgetCell.value)||0;
+    await storageSet('settings', settings);
+    render();
+    return;
+  }
+  // Haushaltskonto: Kontostand-Abgleich
+  const hhFieldCell = e.target.closest('[data-hhfield]');
+  if(hhFieldCell){
+    const key = hhFieldCell.dataset.hhfield;
+    const raw = hhFieldCell.value;
+    if(key==='actual'){ monthData.hhActualBalance = raw==='' ? null : parseFloat(raw); }
+    else if(key==='opening'){ monthData.hhOpening = parseFloat(raw)||0; }
+    else if(key==='inflow'){ monthData.hhInflow = parseFloat(raw)||0; }
+    await storageSet(`month:${currentMonthKey}`, monthData);
+    render();
+    return;
+  }
+  // Projektionsrechner
+  const projCell = e.target.closest('[data-proj]');
+  if(projCell){
+    settings.projection = settings.projection || { monthly:300, years:20, rate:6 };
+    settings.projection[projCell.dataset.proj] = parseFloat(projCell.value)||0;
+    await storageSet('settings', settings);
+    render();
+    return;
+  }
+  // Einstellungen der Karten "Überschuss verteilen" & "Kleinunternehmen"
+  const investCell = e.target.closest('[data-invest]');
+  if(investCell){
+    const key = investCell.dataset.invest;
+    const value = parseFloat(investCell.value)||0;
+    if(key==='bizTaxRate'){ settings.bizTaxRate = value; }
+    else if(key==='bizSaveRate'){ settings.bizSaveRate = value; }
+    else { settings.invest[key] = value; }
+    await storageSet('settings', settings);
+    render();
+    return;
+  }
+
+  const cell = e.target.closest('[data-field]');
+  if(!cell) return;
+  const row = e.target.closest('[data-kind]');
+  if(!row) return;
+  const kind = row.dataset.kind, id = row.dataset.id, field = cell.dataset.field;
+  let value = cell.value;
+  if(field==='amount') value = parseFloat(value)||0;
+  if(field==='anchor') value = parseInt(value)||1;
+  if(field==='target'||field==='current'||field==='monthly') value = parseFloat(value)||0;
+  if(field==='budget') value = parseFloat(value)||0;
+
+  if(kind==='income'){
+    const item = monthData.income.find(i=>i.id===id); if(item){ item[field]=value; await storageSet(`month:${currentMonthKey}`, monthData); }
+  } else if(kind==='fixed'){
+    const item = settings.fixedCosts.find(f=>f.id===id); if(item){ item[field]=value; await storageSet('settings', settings); }
+  } else if(kind==='tx'){
+    const item = monthData.transactions.find(t=>t.id===id); if(item){ item[field]=value; await storageSet(`month:${currentMonthKey}`, monthData); }
+  } else if(kind==='biz'){
+    const item = (monthData.business||[]).find(b=>b.id===id); if(item){ item[field]=value; await storageSet(`month:${currentMonthKey}`, monthData); }
+  } else if(kind==='account'){
+    const item = (settings.accounts||[]).find(a=>a.id===id); if(item){ item[field]=value; await storageSet('settings', settings); }
+  } else if(kind==='category'){
+    const item = settings.categories.find(c=>c.id===id); if(item){ item[field]=value; await storageSet('settings', settings); }
+  } else if(kind==='goal'){
+    const item = (settings.goals||[]).find(g=>g.id===id); if(item){ item[field]=value; await storageSet('settings', settings); }
+  } else if(kind==='household'){
+    const item = (monthData.household||[]).find(h=>h.id===id); if(item){ item[field]=value; await storageSet(`month:${currentMonthKey}`, monthData); }
+  } else if(kind==='hhcategory'){
+    const item = (settings.hhCategories||[]).find(c=>c.id===id); if(item){ item[field]=value; await storageSet('settings', settings); }
+  }
+  await loadHistory();
+  render();
+});
+
+init();
+</script>
+</body>
+</html>
